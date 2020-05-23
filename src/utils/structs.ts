@@ -1,4 +1,75 @@
 //region CPU utilities
+
+import { u8, u16 } from "./types.js";
+
+/// A struct holding state information about a 6502 CPU.
+///
+/// This struct is held internally, but can be copied to power to things
+/// like debug formatters and, if taken at the end of a simulation cycle,
+/// serialization.
+export interface ICpuState {
+    /// The Accumulator register
+    acc: u8,
+
+    /// X index register
+    x: u8,
+
+    /// Y index register
+    y: u8,
+
+    /// The stack pointer
+    ///
+    /// # Note
+    ///
+    /// This register is a pointer to a location in memory on the first page
+    /// ($01XX) of memory. The 6502 uses a bottom-up stack, so the 'first'
+    /// location on the stack is `$01FF` and the 'last' is `$0100`.
+    ///
+    /// Stack _overflow_ occurs when the stack pointer decreases all the way to
+    /// $00 and wraps around to $FF (the beginning). _Underflow_ occurs the
+    /// other way around, from $FF to $00.
+    stack: u8,
+
+    /// The program counter
+    ///
+    /// # Note
+    ///
+    /// This is incremented by the emulator after executing each instruction,
+    /// and refers to the address in memory of the next instruction
+    pc: u16,
+
+    /// The instruction being executed.
+    ///
+    /// # Note
+    ///
+    /// Instructions consist of an opcode, having 1 byte, and an optional
+    /// operand having 1 or 2 bytes (depending on the instruction and addressing
+    /// mode).
+    ///
+    /// The last 8 bits of this register are unused.
+    instruction: number,
+
+    /// The program status register.
+    status: u8,
+
+    /// The total number of cycles that this CPU has ran
+    ///
+    /// # Note
+    ///
+    /// This is allowed to overflow, as it's only used for debugging and test
+    /// comparison. It is not a part of core emulation.
+    tot_cycles: number,
+
+    /// The resolved address of the instruction
+    addr: u16,
+
+    /// The addressing mode of the opcode being executed
+    addr_mode: AddressingMode,
+
+    /// The opcode being executed
+    instr: Instruction,
+}
+
 // The addressing mode for the CPU
 export enum AddressingMode {
     /// Zero-Page
@@ -200,6 +271,20 @@ export const enum CpuStatus {
     OVERFLOW = 0x40,
     NEGATIVE = 0x80
 };
+
+export const POWERON_CPU_STATE = Object.freeze({
+    acc: 0,
+    x: 0,
+    y: 0,
+    stack: 0xFD,
+    pc: 0xC000,
+    status: 0x24,
+    tot_cycles: 7,
+    instruction: 0xEA,
+    addr: 0,
+    addr_mode: AddressingMode.Impl,
+    instr: Instruction.NOP
+} as ICpuState);
 //endregion
 
 //region PPU utilities

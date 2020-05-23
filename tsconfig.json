@@ -8,6 +8,7 @@
             "ES2018",
             "DOM"
         ],
+        "noFallthroughCasesInSwitch": true
     },
     "files": [
         "src/index.ts"
