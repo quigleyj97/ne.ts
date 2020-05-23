@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "outDir": "lib",
+        "module": "ESNext",
+        "moduleResolution": "Node",
+        "lib": [
+            "ES2018",
+            "DOM"
+        ],
+    },
+    "files": [
+        "src/index.ts"
+    ]
+}
