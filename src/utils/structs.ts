@@ -276,7 +276,7 @@ export const enum PpuControlPorts {
 ///
 /// To index, multiply the color index by 3 and take the next 3 values in memory
 /// as an (R,G,B) 8-byte triplet
-export const PALLETE_TABLE = Object.freeze(new Uint8Array([
+export const PALLETE_TABLE: Readonly<Uint8Array> = new Uint8Array([
     //          0*              1*              2*              3*
     /* *0 */    101, 101, 101,  174, 174, 174,  254, 254, 255,  254, 254, 255, // White
     /* *1 */    0, 45, 105,     15,  99,  179,  93,  179, 255,  188, 223, 255, // Blue
@@ -294,6 +294,6 @@ export const PALLETE_TABLE = Object.freeze(new Uint8Array([
     /* *D */    0, 0, 0,        0, 0, 0,        78, 78, 78,     182, 182, 182, // White
     /* *E */    0, 0, 0,        0, 0, 0,        0, 0, 0,        0, 0, 0,       // Black
     /* *F */    0, 0, 0,        0, 0, 0,        0, 0, 0,        0, 0, 0
-]));
+]);
 
 //endregion
