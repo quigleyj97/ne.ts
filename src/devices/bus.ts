@@ -5,8 +5,7 @@
 //! the address space they're mapped, the addresses will be the same and start
 //! from 0.
 
-import { u16, u8 } from "../types.js";
-import { IBusDevice } from "../utils.js";
+import { IBusDevice, u8, u16 } from "../utils/index.js";
 
 interface IMemoryMappedDevice {
     /// The start of this mapped range
