@@ -1,5 +1,2 @@
-const foo = "test";
-
-console.log("hello, world");
-
-export { foo };
+export * from "./devices/index.js";
+export * from "./utils.js";

@@ -15,5 +15,8 @@
   "scripts": {
     "build": "tsc",
     "test": "mocha"
+  },
+  "mocha": {
+    "recursive": true
   }
 }
