@@ -1,13 +1,5 @@
-import { u8, u16, ICpuState, POWERON_CPU_STATE, CpuStatus, decode_instruction, AddressingMode, Instruction } from "../utils/index.js";
+import { u8, u16, ICpuState, POWERON_CPU_STATE, CpuStatus, decode_instruction, AddressingMode, Instruction, bytes_to_addr, log_state } from "../utils/index.js";
 import { Bus } from "./bus.js";
-
-/** helper function to handle little-endian addresses
- * 
- * TODO: remove or inline
- */
-function bytes_to_addr(lo: u8, hi: u8): u16 {
-    return (lo << 8) + hi;
-}
 
 export class Cpu6502 {
     public state: ICpuState = { ...POWERON_CPU_STATE };
@@ -726,103 +718,6 @@ export class Cpu6502 {
     }
 
     toString() {
-        // TODO: I want to move a lot of this logic somewhere else
-
-        // an ugly helper for formatting
-        const hex = (input: number, width: number) => left_pad(input.toString(16).toUpperCase(), "0", width);
-        const left_pad = (input: string, fill: string, width: number) => (new Array(width).fill(fill).join("") + input).slice(-width);
-        const right_pad = (input: string, fill: string, width: number) => (input + new Array(width).fill(fill).join("")).slice(0, width);
-        let {
-            instruction,
-            addr_mode,
-            addr,
-            instr,
-            x,
-            y,
-            acc,
-            pc,
-            status,
-            stack,
-            tot_cycles
-        } = this.state;
-        let bytes = [instruction & 0xFF, (instruction & 0xFF00) >> 8, (instruction & 0xFF0000) >> 16];
-        let ops: string;
-        switch (addr_mode) {
-            case AddressingMode.Abs:
-            case AddressingMode.AbsX:
-            case AddressingMode.AbsY:
-            case AddressingMode.AbsInd:
-                ops = `${hex(bytes[0], 2)} ${hex(bytes[1], 2)} ${hex(bytes[2], 2)}`;
-                break;
-            case AddressingMode.Accum:
-            case AddressingMode.Impl:
-                ops = right_pad(hex(bytes[0], 2), " ", 8);
-                break;
-            default:
-                ops = right_pad(`${hex(bytes[0], 2)} ${hex(bytes[1], 2)}`, " ", 8);
-        }
-
-        let operand_bytes = bytes_to_addr(bytes[2], bytes[1]);
-        let bus = this.bus;
-        let data = bus.read(addr);
-        let is_jmp = instr == Instruction.JMP || instr == Instruction.JSR;
-        let instr_str: string;
-        switch (addr_mode) {
-            case AddressingMode.Abs: {
-                instr_str = `${Instruction[instr]} $${hex(addr, 4)}`;
-                if (!is_jmp) {
-                    instr_str += " = " + hex(data, 2);
-                }
-                break;
-            }
-            case AddressingMode.AbsX: {
-                instr_str = `${Instruction[instr]} $${hex(operand_bytes, 4)},X @ ${hex(addr, 4)} = ${hex(data, 2)}`;
-                break;
-            }
-            case AddressingMode.AbsY: {
-                instr_str = `${Instruction[instr]} $${hex(operand_bytes, 4)},Y @ ${hex(addr, 4)} = ${hex(data, 2)}`;
-                break;
-            }
-            case AddressingMode.AbsInd: {
-                instr_str = `${Instruction[instr]} ($${hex(operand_bytes, 4)}) = ${hex(addr, 4)}`;
-                break;
-            }
-            case AddressingMode.Imm:
-                instr_str = `${Instruction[instr]} #$${hex(bytes[1], 2)}`;
-                break;
-            case AddressingMode.ZP:
-                instr_str = `${Instruction[instr]} $${hex(addr, 2)} = ${hex(data, 2)}`;
-                break;
-            case AddressingMode.ZPX:
-                instr_str = `${Instruction[instr]} $${hex(bytes[1], 2)},X @ ${hex(addr, 2)} = ${hex(data, 2)}`;
-                break;
-            case AddressingMode.ZPY:
-                instr_str = `${Instruction[instr]} $${hex(bytes[1], 2)},Y @ ${hex(addr, 2)} = ${hex(data, 2)}`;
-                break;
-            case AddressingMode.Impl:
-                instr_str = `${Instruction[instr]}`;
-                break;
-            case AddressingMode.Rel:
-                instr_str = `${Instruction[instr]} $${hex(addr, 4)}`;
-                break;
-            case AddressingMode.Accum:
-                instr_str = `${Instruction[instr]} A`;
-                break;
-            case AddressingMode.IndX: {
-                let sum = 0xFF & (x + bytes[1]);
-                instr_str = `${Instruction[instr]} ($${hex(bytes[1], 2)},X) @ ${hex(sum, 2)} = ${hex(addr, 4)} = ${hex(data, 2)}`;
-                break;
-            }
-            case AddressingMode.IndY: {
-                let ind = bytes_to_addr(
-                    this.bus.read(0xFF & (bytes[1] + 1)),
-                    this.bus.read(bytes[1]),
-                );
-                instr_str = `${Instruction[instr]} ($${hex(bytes[1], 2)}),Y = ${hex(ind, 4)} @ ${hex(addr, 4)} = ${hex(data, 2)}`;
-                break;
-            }
-        }
-
-        return `${hex(pc, 4)}  ${right_pad(ops, " ", 8)}  ${right_pad(instr_str, " ", 32)}A:${hex(acc, 2)} X:${hex(x, 2)} Y:${hex(y, 2)} P:${hex(status, 2)} SP:${hex(stack, 2)} PPU:  0,  0 CYC:${tot_cycles}`;
+        return log_state(this.state, this.bus);
     }
 }
