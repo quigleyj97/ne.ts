@@ -3,6 +3,7 @@
         "strict": true,
         "outDir": "lib",
         "module": "ESNext",
+        "target": "ESNext",
         "moduleResolution": "Node",
         "lib": [
             "ES2018",
