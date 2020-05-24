@@ -5,6 +5,7 @@ import { readFileSync } from "fs";
 const expect = chai.expect;
 
 const NESTEST_PATH = "./test/data/nestest.nes";
+const NROM_OFFSET = 0x3FE0;
 
 describe("Cartridge Factory", () => {
     it("should construct a cartridge from NESTEST.rom", () => {
@@ -32,15 +33,15 @@ describe("NROMCartridge", () => {
     });
 
     it("should map PRG reads correctly", () => {
-        const data = cart.prg.read(0xC000);
+        const data = cart.prg.read(0xC000 - 0x4020);
         expect(data).to.equal(0x4C);
     });
 
     it("should mirror PRG reads correctly", () => {
         // $3FFF and $7FFF should be mirrors in 16k PRGs like NESTEST
         // In full address space, these addresses map to the reset vector
-        const left = cart.prg.read(0x3FFF);
-        const right = cart.prg.read(0x7FFF);
+        const left = cart.prg.read(0x3FFF + NROM_OFFSET);
+        const right = cart.prg.read(0x7FFF + NROM_OFFSET);
         expect(left).to.equal(0xC5, "Initial address doesn't match expected result")
         expect(left).to.equal(right, "Mirrors don't align");
     });

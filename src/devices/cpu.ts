@@ -37,6 +37,20 @@ export class Cpu6502 {
         this.state.pc = bytes_to_addr(lo, hi);
     }
 
+    public debug() {
+        let old_pc = this.state.pc;
+        this.run_interrupt();
+        this.load_opcode();
+        this.decode_opcode(this.state.instruction);
+        this.state.addr = this.get_addr(this.state.instruction);
+        let new_pc = this.state.pc;
+        this.state.pc = old_pc;
+        let debug_str = this.toString();
+        this.state.pc = new_pc;
+        this.exec_instr();
+        return debug_str;
+    }
+
     public set_flag(flag: CpuStatus) {
         this.state.status |= flag;
     }
@@ -70,7 +84,7 @@ export class Cpu6502 {
     private load_opcode() {
         let opcode = this.read_bus(this.state.pc);
         let op1 = this.read_bus(0xFFFF & (this.state.pc + 1));
-        let op2 = this.read_bus(0xFFFF & (this.state.pc + 2));
+        let op2 = this.read_bus(0xFFFF & (this.state.pc + 2)); // note that we may need to subtract these micro ops later
         this.state.instruction = opcode + (op1 << 8) + (op2 << 16);
     }
 
@@ -128,18 +142,15 @@ export class Cpu6502 {
     /// datasheet details. These depend on the instruction being executed, but
     /// this function is the best place to
     private get_addr(instruction: number): u16 {
-        let { x, y, addr_mode, pc } = this.state;
-        // +2 cycles for instr + byte1 of op readout, minimum
-        this.cycles += 2;
+        let { x, y, addr_mode } = this.state;
         // Advance the PC at _least_ 1 byte
         this.adv_pc(1);
 
-        let op1 = this.state.instruction & 0x00FF;
-        let op2 = this.state.instruction & 0x0000FF;
+        let op1 = (this.state.instruction & 0xFF00) >> 8;
+        let op2 = (this.state.instruction & 0xFF0000) >> 16;
 
         switch (addr_mode) {
             case AddressingMode.Abs: {
-                this.cycles += 1;
                 this.adv_pc(2);
                 return bytes_to_addr(op2, op1);
             }
@@ -157,7 +168,7 @@ export class Cpu6502 {
                 if ((((x + op1) & 0x0100) == 0x0100)) {
                     this.cycles += 1; // oops cycle
                 }
-                this.cycles += 3;
+                this.cycles += 2;
                 return addr;
             }
             case AddressingMode.AbsY: {
@@ -166,19 +177,26 @@ export class Cpu6502 {
                 if ((((y + op1) & 0x0100) == 0x0100)) {
                     this.cycles += 1; // oops cycle
                 }
-                this.cycles += 3;
+                this.cycles += 2;
                 return addr;
             }
             case AddressingMode.Accum:
                 // TODO: Make addressing Optional?
+                this.cycles -= 1;
                 return 0x0000;
             case AddressingMode.Imm:
                 this.adv_pc(1);
+                this.cycles -= 1;
                 return 0x0000;
-            case AddressingMode.Impl: return 0x0000;
+            case AddressingMode.Impl:
+                this.cycles -= 1;
+                return 0x0000;
             case AddressingMode.IndX: {
+                this.cycles -= 1; // lop off one of the micro-ops
+                // I know we immediately re-add it but I want cycle corrections
+                // to be purposeful, since we're trying for clock cycle accuracy
                 this.adv_pc(1);
-                let val = 0xFFFF & (op1 + x);
+                let val = 0xFF & (op1 + x);
                 let lo = this.read_bus(val);
                 let hi = this.read_bus(0xFF & (val + 1));
                 this.cycles += 1;
@@ -186,6 +204,7 @@ export class Cpu6502 {
             }
             case AddressingMode.IndY: {
                 this.adv_pc(1);
+                this.cycles -= 1;
                 let lo = this.read_bus(op1);
                 let hi = this.read_bus(0xFF & (op1 + 1));
                 if ((((y + lo) & 0x0100) == 0x0100)) {
@@ -195,10 +214,11 @@ export class Cpu6502 {
             }
             case AddressingMode.Rel: {
                 this.adv_pc(1);
+                this.cycles -= 1;
                 // The 'offset' is _signed_, so we need to add it as a signed
                 // integer.
-                let lo = pc & 0xFF;
-                let hi = (pc & 0xFF00) >> 8;
+                let lo = this.state.pc & 0xFF;
+                let hi = (this.state.pc & 0xFF00) >> 8;
                 let addr = bytes_to_addr(hi, lo);
                 if ((op1 > 127)) {
                     // Twos compliment
@@ -209,12 +229,15 @@ export class Cpu6502 {
             }
             case AddressingMode.ZP:
                 this.adv_pc(1);
+                this.cycles -= 1;
                 return bytes_to_addr(0, op1)
             case AddressingMode.ZPX:
                 this.adv_pc(1);
+                this.cycles -= 1;
                 return bytes_to_addr(0, 0xFF & (op1 + x));
             case AddressingMode.ZPY:
                 this.adv_pc(1);
+                this.cycles -= 1;
                 return bytes_to_addr(0, 0xFF & (op1 + y));
         }
     }

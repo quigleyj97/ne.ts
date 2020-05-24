@@ -40,7 +40,8 @@ export class NROMCartridge implements ICartridge {
             write: () => void 0, // no-op: this is a ROM
         };
         this.prg = {
-            read: (addr) => this.prg_buffer[this.is_16k ? addr & 0x3FFF : addr],
+            // 0x3FE0 is 0x8000 - CART_START_ADDR, since NROM starts at $8000
+            read: (addr) => this.prg_buffer[this.is_16k ? (addr - 0x3FE0) & 0x3FFF : addr - 0x3FE0],
             write: () => void 0, // no-op: this is a ROM
         };
     }
