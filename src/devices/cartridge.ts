@@ -18,25 +18,33 @@ export interface ICartridge {
 // The simplest sort of cartridge, with no mapping
 export class NROMCartridge implements ICartridge {
     public static from_buffer(header: INesHeader, buf: Uint8Array) {
-        const { prg_size } = header;
+        const { prg_size, flags_6 } = header;
         const prg_end = 16 + 0x4000 * prg_size;
         const prg_buffer = buf.slice(16, prg_end);
         const chr_buffer = buf.slice(prg_end, prg_end + 0x2000);
-        return new NROMCartridge(chr_buffer, prg_buffer, prg_size === 1);
+        return new NROMCartridge(chr_buffer, prg_buffer, prg_size === 1, (flags_6 & 0x01) === 0);
     }
 
     private readonly chr_buffer: Uint8Array;
     private readonly prg_buffer: Uint8Array;
+    private readonly nametable: Uint8Array;
+    private readonly use_horizontal_mirroring: boolean;
     private readonly is_16k: boolean;
     public readonly chr: IBusDevice;
     public readonly prg: IBusDevice;
 
-    constructor(chr_buffer: Uint8Array, prg_buffer: Uint8Array, is_16k: boolean) {
+    constructor(chr_buffer: Uint8Array, prg_buffer: Uint8Array, is_16k: boolean, use_horizontal_mirroring: boolean) {
         this.chr_buffer = chr_buffer;
         this.prg_buffer = prg_buffer;
+        this.nametable = new Uint8Array(0x800);
+        this.use_horizontal_mirroring = use_horizontal_mirroring;
+
         this.is_16k = is_16k;
         this.chr = {
-            read: (addr) => addr > 0x2000 ? 0 : this.chr_buffer[addr],
+            read: (addr) => {
+                if (addr < 0x2000) return this.chr_buffer[addr];
+                return this.nametable[(addr - 0x2000) & (this.use_horizontal_mirroring ? ~0x400 : ~0x800)];
+            },
             write: () => void 0, // no-op: this is a ROM
         };
         this.prg = {
