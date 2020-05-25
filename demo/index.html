@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ne.ts emulator - nestest.nes</title>
+    <script type="module">
+        import { NesEmulator, CartridgeMapperFactory, dump_nametable, dump_palettes } from "../lib/index.js";
+
+        function rgb8_to_imagedata(buf, width, height) {
+            // a note:
+            // the emulator right now writes textures with (0,0) on the upper
+            // left, with successive values proceeding _down_ instead of _across_.
+            // ImageData has this reversed, with successive values proceeding
+            // across.
+            const imgdata = new ImageData(width, height);
+            const data = imgdata.data;
+            for (let row = 0; row < width; row++) {
+                for (let col = 0; col < height; col++) {
+                    const src_idx = row * height + row;
+                    const dest_idx = col * width + row;
+                    data[dest_idx * 4 + 0] = buf[src_idx * 3 + 0];
+                    data[dest_idx * 4 + 1] = buf[src_idx * 3 + 1];
+                    data[dest_idx * 4 + 2] = buf[src_idx * 3 + 2];
+                    data[dest_idx * 4 + 3] = 255; // alpha
+                }
+            }
+            return imgdata;
+        }
+
+        async function load_emu() {
+            const res = await fetch("../test/data/nestest.nes", { headers: {
+                'Content-Type': 'application/octet-stream'
+            }})
+            const buf = await res.arrayBuffer();
+            const data = new Uint8Array(buf);
+            const cart = CartridgeMapperFactory.from_buffer(data);
+            const emu = new NesEmulator(cart);
+            let play = false;
+
+            console.log("Cart: ", cart);
+            console.log("Emulator: ", emu);
+
+            /** @type {HTMLCanvasElement} */
+            const emu_output = document.getElementById("emu-output");
+            const emu_out_ctx = emu_output.getContext("2d");
+            /** @type {HTMLCanvasElement} */
+            const nametable_output = document.getElementById("nametable-output");
+            const nametable_out_ctx = nametable_output.getContext("2d");
+            /** @type {HTMLCanvasElement} */
+            const palette_output = document.getElementById("palette-output");
+            const palette_out_ctx = palette_output.getContext("2d");
+
+            document.getElementById("adv-cpu").addEventListener("click", () => {
+                console.log(emu.step_debug());
+            });
+            document.getElementById("adv-frame").addEventListener("click", () => {
+                const buf = emu.run_frame();
+                setOutputs(buf);
+            });
+            document.getElementById("adv-frame-debug").addEventListener("click", () => {
+                const buf = emu.debug_frame();
+                setOutputs(buf);
+            });
+            document.getElementById("run-emulator").addEventListener("click", () => {
+                if (play) return;
+                play = true;
+                requestAnimationFrame(run_frame);
+            });
+            document.getElementById("stop-emulator").addEventListener("click", () => {
+                play = false;
+            })
+
+            function setOutputs(buf) {
+                emu_out_ctx.putImageData(rgb8_to_imagedata(buf, 256, 240), 0, 0);
+                nametable_out_ctx.putImageData(rgb8_to_imagedata(dump_nametable(emu.ppu.bus), 256, 256), 0, 0);
+                palette_out_ctx.putImageData(rgb8_to_imagedata(dump_palettes(emu.ppu.bus), 128, 2), 0, 0);
+            }
+
+            function run_frame() {
+                if (play == false) return;
+                const buf = emu.run_frame();
+                // setOutputs(buf);
+                emu_out_ctx.putImageData(rgb8_to_imagedata(buf, 256, 240), 0, 0);
+                requestAnimationFrame(run_frame);
+            }
+        }
+
+        if (document.readyState === "complete") {
+            document.addEventListener("DOMContentLoaded", () => load_emu());
+        } else {
+            load_emu();
+        }
+
+    </script>
+</head>
+<body>
+    <div id="output">
+        <span>
+            <fieldset style="display: inline-block">
+                <legend>Debug</legend>
+                <button id="adv-cpu" title="Advance the CPU ahead one cycle, logging the state before execution">></button>
+                <button id="adv-frame" title="Advance the emulator one frame, without logging">>></button>
+                <button id="adv-frame-debug" title="Advance the emulator, logging CPU state with each iteration">≥≥</button>
+            </fieldset>
+            <fieldset style="display: inline-block">
+                <legend>Play</legend>
+                <button id="run-emulator" title="Run the emulator at full speed">▶️</button>
+                <button id="stop-emulator" title="Stop the emulator">⏸</button>
+            </fieldset>
+        </span>
+        <fieldset>
+            <legend>Output</legend>
+            <canvas width="256" height="240" id="emu-output"></canvas>
+            <canvas width="256" height="256" id="nametable-output"></canvas>
+            <canvas width="128" height="2" id="palette-output"></canvas>
+        </fieldset>
+    </div>
+</body>
+</html>

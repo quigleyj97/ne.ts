@@ -6,6 +6,12 @@ A NES emulator written in TypeScript
 
 `yarn`, then `yarn build`. You can also use NPM, of course.
 
+## Running
+
+The unit and integration tests can be run with `yarn test`. To run a more fully-
+featured demo environment, run `yarn serve` to open the emulator in a browser
+window.
+
 ## Resources
 
 #### General
