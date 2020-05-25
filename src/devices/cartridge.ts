@@ -43,9 +43,12 @@ export class NROMCartridge implements ICartridge {
         this.chr = {
             read: (addr) => {
                 if (addr < 0x2000) return this.chr_buffer[addr];
-                return this.nametable[(addr - 0x2000) & (this.use_horizontal_mirroring ? ~0x400 : ~0x800)];
+                return this.nametable[(addr - 0x2000) & (0xFFFF & (this.use_horizontal_mirroring ? ~0x400 : ~0x800))];
             },
-            write: () => void 0, // no-op: this is a ROM
+            write: (addr, data) => {
+                if (addr < 0x2000) return; // no-op: this is a ROM
+                this.nametable[(addr - 0x2000) & (0xFFFF & (this.use_horizontal_mirroring ? ~0x400 : ~0x800))] = data;
+            }
         };
         this.prg = {
             // 0x3FE0 is 0x8000 - CART_START_ADDR, since NROM starts at $8000

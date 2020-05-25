@@ -222,7 +222,7 @@ export class Cpu6502 {
                 let addr = bytes_to_addr(hi, lo);
                 if ((op1 > 127)) {
                     // Twos compliment
-                    return 0xFFFF & (addr - (~op1 + 1));
+                    return 0xFFFF & (addr - ((0xFF & ~op1) + 1));
                 } else {
                     return 0xFFFF & (addr + op1);
                 }
@@ -302,9 +302,9 @@ export class Cpu6502 {
                     console.warn(" [WARN] This emulator doesn't support BCD, but the BCD flag is set");
                 }
                 let op = this.read();
-                let val = this.state.acc - op - ((~this.state.status & CpuStatus.CARRY) ? 1 : 0);
-                this.check_carry(~val);
-                this.check_overflow(this.state.acc, ~op);
+                let val = this.state.acc - op - (((0xFF & (0xFF & ~this.state.status)) & CpuStatus.CARRY) ? 1 : 0);
+                this.check_carry(0xFF & ~val);
+                this.check_overflow(this.state.acc, 0xFF & ~op);
                 this.state.acc = (0xFF & val);
                 this.check_zero(this.state.acc);
                 this.check_negative(this.state.acc);
@@ -366,7 +366,7 @@ export class Cpu6502 {
                 break;
             }
             case Instruction.BMI: {
-                if (~this.state.status & CpuStatus.NEGATIVE) {
+                if ((0xFF & ~this.state.status) & CpuStatus.NEGATIVE) {
                     return;
                 }
                 this.cycles += 1;
@@ -382,7 +382,7 @@ export class Cpu6502 {
                 break;
             }
             case Instruction.BVS: {
-                if (~this.state.status & CpuStatus.OVERFLOW) {
+                if ((0xFF & ~this.state.status) & CpuStatus.OVERFLOW) {
                     return;
                 }
                 this.cycles += 1;
@@ -398,7 +398,7 @@ export class Cpu6502 {
                 break;
             }
             case Instruction.BCS: {
-                if (~this.state.status & CpuStatus.CARRY) {
+                if ((0xFF & ~this.state.status) & CpuStatus.CARRY) {
                     return;
                 }
                 this.cycles += 1;
@@ -406,7 +406,7 @@ export class Cpu6502 {
                 break;
             }
             case Instruction.BEQ: {
-                if (~this.state.status & CpuStatus.ZERO) {
+                if ((0xFF & ~this.state.status) & CpuStatus.ZERO) {
                     return;
                 }
                 this.cycles += 1;
@@ -736,7 +736,7 @@ export class Cpu6502 {
         let addr = this.maskable_interrupt ? 0xFFFE : 0xFFFA;
         let addr_lo = this.read_bus(addr);
         let addr_hi = this.read_bus(addr + 1);
-        this.state.pc = bytes_to_addr(addr_lo, addr_hi);
+        this.state.pc = bytes_to_addr(addr_hi, addr_lo);
         return true;
     }
 

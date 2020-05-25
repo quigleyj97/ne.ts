@@ -1,4 +1,4 @@
-import { u16, Ram, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts } from "../utils/index.js";
+import { u16, Ram, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -72,7 +72,9 @@ export class Ppu2C02 {
             end: PPU_PALETTE_END_ADDR,
             mask: PPU_PALETTE_MASK
         });
-        this.control = 0;
+        // This isn't exactly correct but I'm going to come back to this later
+        // with better power-on warmup simulation
+        this.control = 0x80;
         this.mask = 0;
         // magic constant given from NESDEV for PPU poweron state
         this.status = 0xA0;
@@ -98,7 +100,7 @@ export class Ppu2C02 {
             let x = ~~(this.pixel_cycle / 8);
             let y = ~~(this.scanline / 8);
             let tile = this.bus.read(PPU_NAMETABLE_START_ADDR + x * 32 + y);
-            let color = tile == 0x20 ? 0 : 255;
+            let color = tile === 0x20 ? 0 : 255;
             for (let i = 0; i < 3; i++) {
                 this.frame_data[idx * 3 + i] = color;
             }
@@ -109,7 +111,7 @@ export class Ppu2C02 {
             this.status |= PpuStatusFlags.VBLANK;
         } else if (this.scanline == 262 && this.pixel_cycle == 1) {
             this.vblank_nmi_ready = false;
-            this.status &= ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
+            this.status &= 0xFF & ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
         }
 
         this.pixel_cycle += 1;
@@ -156,7 +158,7 @@ export class Ppu2C02 {
         switch (port_addr) {
             case PpuControlPorts.PPUSTATUS: {
                 let status = this.status | (PpuStatusFlags.STATUS_IGNORED & this.last_bus_value);
-                this.status &= ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
+                this.status &= 0xFF & ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
                 this.is_ppuaddr_lo = false;
                 this.vblank_nmi_ready = false;
                 this.last_bus_value = status;
@@ -181,7 +183,7 @@ export class Ppu2C02 {
                     // 0x3F00. So let's do that after setting data, just in case
                     // anything needs that...
                     let data = this.bus.read(this.ppuaddr);
-                    this.ppudata_buffer = this.bus.read(this.ppuaddr & ~0x1000);
+                    this.ppudata_buffer = this.bus.read(this.ppuaddr & (0xFFFF & ~0x1000));
                     this.last_bus_value = data;
                     return data;
                 }
@@ -240,5 +242,24 @@ export class Ppu2C02 {
                 return;
             }
         };
+    }
+}
+
+/**
+ * A helper for mapping CPU-space control port ops to the PPU control ports
+ */
+export class PpuControlPortMapper implements IBusDevice {
+    private readonly ppu: Ppu2C02;
+
+    constructor(ppu: Ppu2C02) {
+        this.ppu = ppu;
+    }
+
+    public read(addr: u16): u8 {
+        return this.ppu.control_port_read(addr + 0x2000);
+    }
+
+    public write(addr: u16, data: u8) {
+        return this.ppu.control_port_write(addr + 0x2000, data);
     }
 }
