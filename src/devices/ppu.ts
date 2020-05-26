@@ -72,9 +72,7 @@ export class Ppu2C02 {
             end: PPU_PALETTE_END_ADDR,
             mask: PPU_PALETTE_MASK
         });
-        // This isn't exactly correct but I'm going to come back to this later
-        // with better power-on warmup simulation
-        this.control = 0x80;
+        this.control = 0;
         this.mask = 0;
         // magic constant given from NESDEV for PPU poweron state
         this.status = 0xA0;
@@ -225,19 +223,19 @@ export class Ppu2C02 {
             case PpuControlPorts.PPUADDR: {
                 if (this.is_ppuaddr_lo) {
                     this.is_ppuaddr_lo = false;
-                    this.ppuaddr |= data;
+                    this.ppuaddr |= (0xFF & data);
                 } else {
                     this.is_ppuaddr_lo = true;
-                    this.ppuaddr = data << 8;
+                    this.ppuaddr = 0xFF00 & (data << 8);
                 }
                 return;
             }
             case PpuControlPorts.PPUDATA: {
                 this.bus.write(this.ppuaddr, data);
-                if ((this.control & PpuControlFlags.VRAM_INCREMENT_SELECT) > 0) {
-                    this.ppuaddr += 32;
+                if ((0xFF & (this.control & PpuControlFlags.VRAM_INCREMENT_SELECT)) !== 0) {
+                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 32);
                 } else {
-                    this.ppuaddr += 1;
+                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 1);
                 }
                 return;
             }

@@ -48,7 +48,7 @@ export class Bus {
                 continue;
             }
             const mapped_addr = (addr - map.start) & map.mask;
-            const val = map.dev.read(mapped_addr);
+            const val = 0xFF & map.dev.read(mapped_addr);
             this.last_bus_val = val;
             return val;
         }
@@ -64,7 +64,7 @@ export class Bus {
                 continue;
             }
             const mapped_addr = (addr - map.start) & map.mask;
-            map.dev.write(mapped_addr, data);
+            map.dev.write(mapped_addr, 0xFF & data);
             return;
         }
     }

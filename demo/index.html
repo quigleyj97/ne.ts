@@ -4,25 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ne.ts emulator - nestest.nes</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        fieldset {
+            border-radius: 5px;
+        }
+        canvas {
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+        }
+    </style>
     <script type="module">
-        import { NesEmulator, CartridgeMapperFactory, dump_nametable, dump_palettes } from "../lib/index.js";
+        import { NesEmulator, CartridgeMapperFactory, dump_nametable, dump_palettes, dump_chr } from "../lib/index.js";
 
         function rgb8_to_imagedata(buf, width, height) {
-            // a note:
-            // the emulator right now writes textures with (0,0) on the upper
-            // left, with successive values proceeding _down_ instead of _across_.
-            // ImageData has this reversed, with successive values proceeding
-            // across.
             const imgdata = new ImageData(width, height);
             const data = imgdata.data;
             for (let row = 0; row < width; row++) {
                 for (let col = 0; col < height; col++) {
-                    const src_idx = row * height + row;
-                    const dest_idx = col * width + row;
-                    data[dest_idx * 4 + 0] = buf[src_idx * 3 + 0];
-                    data[dest_idx * 4 + 1] = buf[src_idx * 3 + 1];
-                    data[dest_idx * 4 + 2] = buf[src_idx * 3 + 2];
-                    data[dest_idx * 4 + 3] = 255; // alpha
+                    const idx = col * width + row;
+                    data[idx * 4 + 0] = buf[idx * 3 + 0];
+                    data[idx * 4 + 1] = buf[idx * 3 + 1];
+                    data[idx * 4 + 2] = buf[idx * 3 + 2];
+                    data[idx * 4 + 3] = 255; // alpha
                 }
             }
             return imgdata;
@@ -47,6 +53,9 @@
             /** @type {HTMLCanvasElement} */
             const nametable_output = document.getElementById("nametable-output");
             const nametable_out_ctx = nametable_output.getContext("2d");
+            /** @type {HTMLCanvasElement} */
+            const chr_output = document.getElementById("chr-output");
+            const chr_out_ctx = chr_output.getContext("2d");
             /** @type {HTMLCanvasElement} */
             const palette_output = document.getElementById("palette-output");
             const palette_out_ctx = palette_output.getContext("2d");
@@ -73,7 +82,8 @@
 
             function setOutputs(buf) {
                 emu_out_ctx.putImageData(rgb8_to_imagedata(buf, 256, 240), 0, 0);
-                nametable_out_ctx.putImageData(rgb8_to_imagedata(dump_nametable(emu.ppu.bus), 256, 256), 0, 0);
+                nametable_out_ctx.putImageData(rgb8_to_imagedata(dump_nametable(emu.ppu.bus, 0x0000), 512, 480), 0, 0);
+                chr_out_ctx.putImageData(rgb8_to_imagedata(dump_chr(cart, 0x0000), 128, 256), 0, 0);
                 palette_out_ctx.putImageData(rgb8_to_imagedata(dump_palettes(emu.ppu.bus), 128, 2), 0, 0);
             }
 
@@ -112,7 +122,8 @@
         <fieldset>
             <legend>Output</legend>
             <canvas width="256" height="240" id="emu-output"></canvas>
-            <canvas width="256" height="256" id="nametable-output"></canvas>
+            <canvas width="512" height="480" id="nametable-output"></canvas>
+            <canvas width="128" height="256" id="chr-output"></canvas>
             <canvas width="128" height="2" id="palette-output"></canvas>
         </fieldset>
     </div>

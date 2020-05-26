@@ -1,37 +1,78 @@
 /** Helpers for debugging the emulator, such as dumping memory to a texture */
 
 import { ICartridge, Bus } from "../devices/index.js";
-import { u8 } from "./types.js";
+import { u8, u16 } from "./types.js";
 import { PALLETE_TABLE } from "./structs.js";
 
 /**
- * Dump the contents of CHR memory into a Uint8Array buffer
- * @param cart The cart to read from
+ * Dump the nametable memory to a 512*480 grayscale RGB8 texture
+ * @param bus A PPU bus with a mounted controller
+ * @param chr_bank The CHR bank to read from, as a 16-bit base address. See {{PpuControlFlags}} for more details
  */
-export function dump_chr(cart: ICartridge) {
-    const buf = new Uint8Array(0x2000);
-    for (let i = 0; i < buf.length; i++) {
-        buf[i] = cart.chr.read(i);
+export function dump_nametable(bus: Bus, chr_bank: u16) {
+    const buf = new Uint8Array(512 * 480 * 3);
+    // the nametable is split into 4 separate 256*256bit subtables, each with
+    // their own attribute data. The nametable itself lives in the first 256*240
+    // of memory, and the attribute data (what palettes to assign to which
+    // regions) live in the remainder of each subtable.
+    // For clarity this uses 3 for loops, one for the subtable and 2 for the
+    // coords.
+    for (let table = 0; table < 4; table++) {
+        for (let row = 0; row < 240; row++) {
+            for (let col = 0; col < 256; col++) {
+                let idx = row * 256 + col + (256*256*table);
+                let x = ~~(col / 8);
+                let y = ~~(row / 8);
+                // This gives us the tile to draw. More precisely, it is the
+                // middle 2 nibbles of the CHR address to read from. The first
+                // nibble is given by the background CHR page select bit on
+                // $PPUCTRL, and the last nibble is given by the y-value
+                let tile = bus.read(0x2000 + table * 0x400 + x * 32 + y);
+                let tile_addr = chr_bank | (tile << 4) | (row % 8);
+
+                let lo = bus.read(tile_addr);
+                let hi = bus.read(tile_addr + 8);
+                
+                // Now to pull the column, we shift right by c mod 8.
+                let offset = 7 - (col % 8);
+                let color_index = ((1 & (hi >> offset)) << 1) | (1 & (lo >> offset));
+
+                // finally, apply a false-color greyscale mapping
+                // TODO: implement pallete reads
+                // These come from a different region of memory, which defines the
+                // pallete mapping for each tile cluster
+                let color: u8 = 0;
+                switch (color_index) {
+                    case 0x00: color = 0x00; break; // black
+                    case 0x01: color = 0x7C; break; // dark gray
+                    case 0x02: color = 0xBC; break; // light gray
+                    case 0x03: color = 0xF8; break; // aaalllllmooosst white
+                }
+                buf[(idx) * 3 + 0] = color;
+                buf[(idx) * 3 + 1] = color;
+                buf[(idx) * 3 + 2] = color;
+            }
+        }
     }
     return buf;
 }
 
 /**
- * Dump the nametable memory to a grayscale RGB8 texture
- * @param bus A PPU bus with a mounted controller
+ * Dump the CHR bank memory to a grayscale 128 * 256 RGB8 texture
+ * @param bus A PPU bus with a mounted cartridge
  */
-export function dump_nametable(bus: Bus) {
-    const buf = new Uint8Array(256 * 256 * 3);
+export function dump_chr(cart: ICartridge) {
+    const buf = new Uint8Array(128 * 256 * 3);
     for (let row = 0; row < 256; row++) {
-        for (let col = 0; col < 256; col++) {
+        for (let col = 0; col < 128; col++) {
             // How the address is calculated:
             // RR = (r / 8) represents the first 2 nibbles of our address,
             // C = (c / 8) represents the third.
             // c = The fourth comes from the actual pixel row, ie, r % 8.
             // eg, 0xRRCr
             let addr = (~~(row / 8) * 0x100) + (row % 8) + ~~(col / 8) * 0x10; //((r / 8) << 8) | ((c / 8) << 4) | (r % 8);
-            let lo = bus.read(addr + 0x2000);
-            let hi = bus.read(addr + 0x2008);
+            let lo = cart.chr.read(addr);
+            let hi = cart.chr.read(addr + 8);
             // Now to pull the column, we shift right by c mod 8.
             let offset = 7 - (col % 8);
             let color_index = ((1 & (hi >> offset)) << 1) | (1 & (lo >> offset));
