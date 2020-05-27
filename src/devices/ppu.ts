@@ -98,7 +98,28 @@ export class Ppu2C02 {
             let x = ~~(this.pixel_cycle / 8);
             let y = ~~(this.scanline / 8);
             let tile = this.bus.read(PPU_NAMETABLE_START_ADDR + x * 32 + y);
-            let color = tile === 0x20 ? 0 : 255;
+            let chr_bank = (this.control & PpuControlFlags.BG_TILE_SELECT) > 0 ? 0x1000 : 0x0;
+            let tile_addr = chr_bank | (tile << 4) | (this.scanline % 8);
+
+            let lo = this.bus.read(tile_addr);
+            let hi = this.bus.read(tile_addr + 8);
+            
+            // Now to pull the column, we shift right by c mod 8.
+            let offset = 7 - (this.pixel_cycle % 8);
+            let color_index = ((1 & (hi >> offset)) << 1) | (1 & (lo >> offset));
+
+            // finally, apply a false-color greyscale mapping
+            // TODO: implement pallete reads
+            // These come from a different region of memory, which defines the
+            // pallete mapping for each tile cluster
+            let color: u8 = 0;
+            switch (color_index) {
+                case 0x00: color = 0x00; break; // black
+                case 0x01: color = 0x7C; break; // dark gray
+                case 0x02: color = 0xBC; break; // light gray
+                case 0x03: color = 0xF8; break; // aaalllllmooosst white
+            }
+
             for (let i = 0; i < 3; i++) {
                 this.frame_data[idx * 3 + i] = color;
             }
