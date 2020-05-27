@@ -20,6 +20,8 @@ describe("NESTEST", () => {
         gold_log = readFileSync(GOLDLOG_PATH, "utf8").split("\n");
         cart = CartridgeMapperFactory.from_buffer(buf);
         nes = new NesEmulator(cart);
+        // set the PC to the automated testing entry point
+        nes.cpu.state.pc = 0xC000;
     });
     
     it("should execute NESTEST", () => {

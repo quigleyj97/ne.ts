@@ -47,7 +47,6 @@ export class NesEmulator {
             end: 0x4000,
             mask: 0x0007
         });
-        this.cpu.reset();
     }
 
     public run_frame() {

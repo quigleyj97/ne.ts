@@ -1,6 +1,10 @@
 import { u8, u16, ICpuState, POWERON_CPU_STATE, CpuStatus, decode_instruction, AddressingMode, Instruction, bytes_to_addr, log_state } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
+export const RESET_VECTOR = 0xFFFC;
+export const NMI_VECTOR = 0xFFFA;
+export const IRQ_VECTOR = 0xFFFE;
+
 export class Cpu6502 {
     public state: ICpuState = { ...POWERON_CPU_STATE };
     private bus: Bus;
@@ -10,6 +14,9 @@ export class Cpu6502 {
 
     constructor(bus: Bus) {
         this.bus = bus;
+        const hi = this.bus.read(RESET_VECTOR);
+        const lo = this.bus.read(RESET_VECTOR + 1);
+        this.state.pc = bytes_to_addr(lo, hi);
     }
 
     public tick() {
@@ -32,8 +39,8 @@ export class Cpu6502 {
     public reset() {
         this.state.stack -= 3;
         this.state.status |= CpuStatus.IRQ_DISABLE;
-        const hi = this.read_bus(0xFFFC);
-        const lo = this.read_bus(0xFFFD);
+        const hi = this.read_bus(RESET_VECTOR);
+        const lo = this.read_bus(RESET_VECTOR + 1);
         this.state.pc = bytes_to_addr(lo, hi);
     }
 
@@ -303,7 +310,7 @@ export class Cpu6502 {
                 }
                 let op = this.read();
                 let val = this.state.acc - op - (((0xFF & (0xFF & ~this.state.status)) & CpuStatus.CARRY) ? 1 : 0);
-                this.check_carry(0xFF & ~val);
+                this.check_carry(0xFFFF & ~val);
                 this.check_overflow(this.state.acc, 0xFF & ~op);
                 this.state.acc = (0xFF & val);
                 this.check_zero(this.state.acc);
@@ -733,7 +740,7 @@ export class Cpu6502 {
         this.clear_flag(CpuStatus.BREAK);
         this.set_flag(CpuStatus.UNUSED);
         this.push_stack(this.state.status);
-        let addr = this.maskable_interrupt ? 0xFFFE : 0xFFFA;
+        let addr = this.maskable_interrupt ? IRQ_VECTOR : NMI_VECTOR;
         let addr_lo = this.read_bus(addr);
         let addr_hi = this.read_bus(addr + 1);
         this.state.pc = bytes_to_addr(addr_hi, addr_lo);
