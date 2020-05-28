@@ -18,7 +18,6 @@ export class NesEmulator {
     constructor(cart: ICartridge) {
         const cpuBus = new Bus();
         this.ram = new Ram(2048);
-        this.cpu = new Cpu6502(cpuBus);
         this.cart = cart;
         cpuBus.map_device({
             dev: cart.prg,
@@ -29,14 +28,14 @@ export class NesEmulator {
         cpuBus.map_device({
             dev: this.ram,
             start: 0x0000,
-            end: 0x2000,
+            end: 0x1FFF,
             mask: 0x07FF
         });
         let ppuBus = new Bus();
         ppuBus.map_device({
             dev: this.cart.chr,
             start: 0,
-            end: 0x4000,
+            end: 0x3FFF,
             mask: 0xFFFF
         });
         this.ppu = new Ppu2C02(ppuBus);
@@ -44,9 +43,10 @@ export class NesEmulator {
         cpuBus.map_device({
             dev: this.ppuMapper,
             start: 0x2000,
-            end: 0x4000,
+            end: 0x3FFF,
             mask: 0x0007
         });
+        this.cpu = new Cpu6502(cpuBus);
     }
 
     public run_frame() {
