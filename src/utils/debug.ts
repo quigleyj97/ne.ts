@@ -20,14 +20,14 @@ export function dump_nametable(bus: Bus, chr_bank: u16) {
     for (let table = 0; table < 4; table++) {
         for (let row = 0; row < 240; row++) {
             for (let col = 0; col < 256; col++) {
-                let idx = row * 256 + col + (256*256*table);
+                let idx = 512 * (row + (table < 2 ? 0 : 240)) + (col + (table % 2 == 0 ? 0 : 256));
                 let x = ~~(col / 8);
                 let y = ~~(row / 8);
                 // This gives us the tile to draw. More precisely, it is the
                 // middle 2 nibbles of the CHR address to read from. The first
                 // nibble is given by the background CHR page select bit on
-                // $PPUCTRL, and the last nibble is given by the y-value
-                let tile = bus.read(0x2000 + table * 0x400 + x * 32 + y);
+                // $PPUCTRL, and the last nibble is given by the x and y-value
+                let tile = bus.read(0x2000 + table * 0x400 + y * 32 + x);
                 let tile_addr = chr_bank | (tile << 4) | (row % 8);
 
                 let lo = bus.read(tile_addr);

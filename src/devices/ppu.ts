@@ -97,7 +97,7 @@ export class Ppu2C02 {
             // syntax to accomplish this: https://stackoverflow.com/a/17218003
             let x = ~~(this.pixel_cycle / 8);
             let y = ~~(this.scanline / 8);
-            let tile = this.bus.read(PPU_NAMETABLE_START_ADDR + x * 32 + y);
+            let tile = this.bus.read(PPU_NAMETABLE_START_ADDR + y * 32 + x);
             let chr_bank = (this.control & PpuControlFlags.BG_TILE_SELECT) > 0 ? 0x1000 : 0x0;
             let tile_addr = chr_bank | (tile << 4) | (this.scanline % 8);
 
@@ -184,7 +184,7 @@ export class Ppu2C02 {
                 return status;
             }
             case PpuControlPorts.OAMDATA: {
-                console.warn(" [WARN] $OAMDATA not implemented (yet)");
+                // console.warn(" [WARN] $OAMDATA not implemented (yet)");
                 return this.last_bus_value;
             }
             case PpuControlPorts.PPUDATA: {
@@ -192,6 +192,12 @@ export class Ppu2C02 {
                 // memory, since the logic for PPUDATA reads isn't actually
                 // combinatorial and requires some plumbing (except for palette
                 // memory, which is special)
+                const addr = this.ppuaddr;
+                if ((0xFF & (this.control & PpuControlFlags.VRAM_INCREMENT_SELECT)) !== 0) {
+                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 32);
+                } else {
+                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 1);
+                }
                 if (port_addr >= 0x3F00) {
                     // This is palette memory, don't buffer...
                     //
@@ -201,13 +207,13 @@ export class Ppu2C02 {
                     // buffer with whatever's in the nametable, mirrored though
                     // 0x3F00. So let's do that after setting data, just in case
                     // anything needs that...
-                    let data = this.bus.read(this.ppuaddr);
-                    this.ppudata_buffer = this.bus.read(this.ppuaddr & (0xFFFF & ~0x1000));
+                    let data = this.bus.read(addr);
+                    this.ppudata_buffer = this.bus.read(addr & (0xFFFF & ~0x1000));
                     this.last_bus_value = data;
                     return data;
                 }
                 let data = this.ppudata_buffer;
-                this.ppudata_buffer = this.bus.read(this.ppuaddr);
+                this.ppudata_buffer = this.bus.read(addr);
                 this.last_bus_value = data;
                 return data;
             }
@@ -244,10 +250,10 @@ export class Ppu2C02 {
             case PpuControlPorts.PPUADDR: {
                 if (this.is_ppuaddr_lo) {
                     this.is_ppuaddr_lo = false;
-                    this.ppuaddr |= (0xFF & data);
+                    this.ppuaddr = (0xFF00 & this.ppuaddr) | (0xFF & data);
                 } else {
                     this.is_ppuaddr_lo = true;
-                    this.ppuaddr = 0xFF00 & (data << 8);
+                    this.ppuaddr = (0xFF & this.ppuaddr) | 0x3F00 & (data << 8);
                 }
                 return;
             }
