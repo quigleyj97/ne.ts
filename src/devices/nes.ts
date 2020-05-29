@@ -3,12 +3,14 @@ import { Ram } from "../utils/addr.js";
 import { ICartridge } from "./cartridge.js";
 import { Bus } from "./bus.js";
 import { Ppu2C02, PpuControlPortMapper } from "./ppu.js";
+import { ControllerDMAAdaptor, ControllerButton } from "./controller.js";
 
 /** A class representing the NES as a whole */
 export class NesEmulator {
     private cpu: Cpu6502;
     private ppu: Ppu2C02;
     private ppuMapper: PpuControlPortMapper;
+    private controller_dma: ControllerDMAAdaptor;
     private ram: Ram;
     private cart: ICartridge;
     private cycles = 0;
@@ -17,6 +19,7 @@ export class NesEmulator {
 
     constructor(cart: ICartridge) {
         const cpuBus = new Bus();
+        this.controller_dma = new ControllerDMAAdaptor();
         this.ram = new Ram(2048);
         this.cart = cart;
         cpuBus.map_device({
@@ -31,11 +34,17 @@ export class NesEmulator {
             end: 0x1FFF,
             mask: 0x07FF
         });
+        cpuBus.map_device({
+            dev: this.controller_dma,
+            start: ControllerDMAAdaptor.START_ADDR,
+            end: ControllerDMAAdaptor.END_ADDR,
+            mask: ControllerDMAAdaptor.MASK
+        });
         let ppuBus = new Bus();
         ppuBus.map_device({
             dev: this.cart.chr,
             start: 0,
-            end: 0x3FFF,
+            end: 0x3EFF,
             mask: 0xFFFF
         });
         this.ppu = new Ppu2C02(ppuBus);
@@ -84,6 +93,7 @@ export class NesEmulator {
         if (this.cycles % 3 === 0) {
             if (this.is_cpu_idle) {
                 // flip this since tick is hot- assume-branch-taken
+                this.controller_dma.tick();
                 if (!debug) {
                     this.cpu.exec();
                 } else {
@@ -92,6 +102,30 @@ export class NesEmulator {
             }
             this.is_cpu_idle = this.cpu.tick();
         }
+    }
+
+    /**
+     * An event handler for controller updates.
+     * 
+     * It is up to the instantiator to map controller buttons to keyboard events,
+     * but a suggested layout is:
+     * 
+     *  - ArrowKeys -> Left, Right, Up, Down
+     *  - Enter -> Start
+     *  - Ctrl -> Select
+     *  - Z -> A
+     *  - X -> B
+     *
+     * Z and X are frequently located next to one another on most keyboard
+     * layouts, and are away from the arrow keys. This makes them convenient
+     * for mapping to A and B.
+     *
+     * @param controller Which controller to update
+     * @param key The key to set the state of
+     * @param pressed Whether that key is pressed
+     */
+    public on_controller_update(controller: 0 | 1, key: ControllerButton, pressed: boolean) {
+        this.controller_dma.update_controller(controller, key, pressed);
     }
 
     public step_debug() {

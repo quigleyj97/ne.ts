@@ -17,7 +17,7 @@
         }
     </style>
     <script type="module">
-        import { NesEmulator, CartridgeMapperFactory, dump_nametable, dump_palettes, dump_chr } from "../lib/index.js";
+        import { NesEmulator, CartridgeMapperFactory, ControllerButton, dump_nametable, dump_palettes, dump_chr } from "../lib/index.js";
 
         function rgb8_to_imagedata(buf, width, height) {
             const imgdata = new ImageData(width, height);
@@ -78,7 +78,46 @@
             });
             document.getElementById("stop-emulator").addEventListener("click", () => {
                 play = false;
-            })
+            });
+
+            function mapKeyToButton(key) {
+                switch (key) {
+                    case "Control":
+                        return ControllerButton.SELECT;
+                    case "Enter":
+                        return ControllerButton.START;
+                    case "Z":
+                        return ControllerButton.A;
+                    case "X":
+                        return ControllerButton.B;
+                    case "ArrowUp":
+                        return ControllerButton.UP;
+                    case "ArrowDown":
+                        return ControllerButton.DOWN;
+                    case "ArrowLeft":
+                        return ControllerButton.LEFT;
+                    case "ArrowRight":
+                        return ControllerButton.RIGHT;
+                    default:
+                        return null;
+                }
+            }
+
+            window.addEventListener("keydown", (ev) => {
+                let key = mapKeyToButton(ev.key);
+                if (key == null) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                emu.on_controller_update(0, key, true);
+            });
+
+            window.addEventListener("keyup", (ev) => {
+                let key = mapKeyToButton(ev.key);
+                if (key == null) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                emu.on_controller_update(0, key, false);
+            });
 
             function setOutputs(buf) {
                 emu_out_ctx.putImageData(rgb8_to_imagedata(buf, 256, 240), 0, 0);

@@ -2,10 +2,10 @@ import { u16, Ram, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDev
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
-const PPU_NAMETABLE_END_ADDR: u16 = 0x4000;
+const PPU_NAMETABLE_END_ADDR: u16 = 0x3EFF;
 const PPU_NAMETABLE_MASK: u16 = 0x0FFF;
-const PPU_PALETTE_START_ADDR: u16 = 0x4000;
-const PPU_PALETTE_END_ADDR: u16 = 0xFFFF;
+const PPU_PALETTE_START_ADDR: u16 = 0x3F00;
+const PPU_PALETTE_END_ADDR: u16 = 0x3FFF;
 const PPU_PALETTE_MASK: u16 = 0x001F;
 
 export class Ppu2C02 {
