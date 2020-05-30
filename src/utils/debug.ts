@@ -27,7 +27,8 @@ export function dump_nametable(bus: Bus, chr_bank: u16) {
                 // middle 2 nibbles of the CHR address to read from. The first
                 // nibble is given by the background CHR page select bit on
                 // $PPUCTRL, and the last nibble is given by the x and y-value
-                let tile = bus.read(0x2000 + table * 0x400 + y * 32 + x);
+                let tile_id = 0x2000 + table * 0x400 + y * 32 + x;
+                let tile = bus.read(tile_id);
                 let tile_addr = chr_bank | (tile << 4) | (row % 8);
 
                 let lo = bus.read(tile_addr);
@@ -37,20 +38,27 @@ export function dump_nametable(bus: Bus, chr_bank: u16) {
                 let offset = 7 - (col % 8);
                 let color_index = ((1 & (hi >> offset)) << 1) | (1 & (lo >> offset));
 
-                // finally, apply a false-color greyscale mapping
-                // TODO: implement pallete reads
-                // These come from a different region of memory, which defines the
-                // pallete mapping for each tile cluster
-                let color: u8 = 0;
-                switch (color_index) {
-                    case 0x00: color = 0x00; break; // black
-                    case 0x01: color = 0x7C; break; // dark gray
-                    case 0x02: color = 0xBC; break; // light gray
-                    case 0x03: color = 0xF8; break; // aaalllllmooosst white
+                // now pull the palette
+                let color: u8;
+                if (color_index == 0b00) {
+                    // read the background
+                    color = bus.read(0x3F00);
+                } else {
+                    const attribute_start_addr = 0x03C0;
+                    let attr_idx = 0x2000 + table * 0x400 + attribute_start_addr + ~~(y / 4) * 8 + ~~(x / 4);
+                    let attr = bus.read(attr_idx);
+                    let attr_shift = ((~~((tile_id % 32) / 2) % 2) + (~~(tile_id / 64) % 2) * 2) * 2;
+
+                    // this gives us our index into pallete RAM
+                    let palette_idx = ((attr >> attr_shift) & 0x03) * 4;
+    
+                    // finally, apply a color mapping from the palette
+                    color = bus.read(0x3F00 + palette_idx + color_index);
                 }
-                buf[(idx) * 3 + 0] = color;
-                buf[(idx) * 3 + 1] = color;
-                buf[(idx) * 3 + 2] = color;
+
+                for (let i = 0; i < 3; i++) {
+                    buf[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
+                }
             }
         }
     }
@@ -101,20 +109,16 @@ export function dump_chr(cart: ICartridge) {
  * @param bus A PPU bus with mounted palette memory
  */
 export function dump_palettes(bus: Bus) {
-    const buf = new Uint8Array(128 * 2 * 3);
-    for (let col = 0; col < 32; col++) {
-        const color = bus.read(0x3F00 | col);
-        const red   = PALLETE_TABLE[color * 3];
-        const green = PALLETE_TABLE[color * 3 + 1];
-        const blue  = PALLETE_TABLE[color * 3 + 2];
-        for (let row = 0; row < 4; row++) {
-            let idx = col * 4 + row;
-            buf[idx * 3] = red;
-            buf[idx * 3 + 1] = green;
-            buf[idx * 3 + 2] = blue;
-            buf[(idx + 128) * 3] = red;
-            buf[(idx + 128) * 3 + 1] = green;
-            buf[(idx + 128) * 3 + 2] = blue;
+    const buf = new Uint8Array(64 * 4 * 3);
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 64; col++) {
+            const color = bus.read(0x3F00 | ~~(col / 4) | (row > 1 ? 16 : 0));
+            const red   = PALLETE_TABLE[color * 3];
+            const green = PALLETE_TABLE[color * 3 + 1];
+            const blue  = PALLETE_TABLE[color * 3 + 2];
+            buf[(row * 64 + col) * 3 + 0] = red;
+            buf[(row * 64 + col) * 3 + 1] = green;
+            buf[(row * 64 + col) * 3 + 2] = blue;
         }
     }
     return buf;

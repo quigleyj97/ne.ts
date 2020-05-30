@@ -121,9 +121,9 @@
 
             function setOutputs(buf) {
                 emu_out_ctx.putImageData(rgb8_to_imagedata(buf, 256, 240), 0, 0);
-                nametable_out_ctx.putImageData(rgb8_to_imagedata(dump_nametable(emu.ppu.bus, 0x0000), 512, 480), 0, 0);
+                nametable_out_ctx.putImageData(rgb8_to_imagedata(dump_nametable(emu.ppu.bus, (emu.ppu.control & 16) > 0 ? 0x1000 : 0x0000), 512, 480), 0, 0);
                 chr_out_ctx.putImageData(rgb8_to_imagedata(dump_chr(cart, 0x0000), 128, 256), 0, 0);
-                palette_out_ctx.putImageData(rgb8_to_imagedata(dump_palettes(emu.ppu.bus), 128, 2), 0, 0);
+                palette_out_ctx.putImageData(rgb8_to_imagedata(dump_palettes(emu.ppu.bus), 64, 4), 0, 0);
             }
 
             function run_frame() {
@@ -163,7 +163,7 @@
             <canvas width="256" height="240" id="emu-output"></canvas>
             <canvas width="512" height="480" id="nametable-output"></canvas>
             <canvas width="128" height="256" id="chr-output"></canvas>
-            <canvas width="128" height="2" id="palette-output"></canvas>
+            <canvas width="64" height="4" id="palette-output"></canvas>
         </fieldset>
     </div>
 </body>

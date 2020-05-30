@@ -1,4 +1,4 @@
-import { u16, Ram, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice } from "../utils/index.js";
+import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -12,7 +12,7 @@ export class Ppu2C02 {
     /// The PPU bus
     private bus: Bus;
     /// The internal palette memory
-    private palette: Ram;
+    private palette: PpuPaletteRam;
     /// The write-only control register
     private control: u8;
     /// The mask register used for controlling various aspects of rendering
@@ -65,7 +65,7 @@ export class Ppu2C02 {
 
     constructor(bus: Bus) {
         this.bus = bus;
-        this.palette = new Ram(32);
+        this.palette = new PpuPaletteRam();
         this.bus.map_device({
             dev: this.palette,
             start: PPU_PALETTE_START_ADDR,
@@ -89,7 +89,6 @@ export class Ppu2C02 {
 
     /** Clock the PPU, rendering to the internal framebuffer and modifying state as appropriate */
     public clock() {
-        // Render a checkerboard pattern for now
         if (this.scanline > -1 && this.scanline < 240 && this.pixel_cycle < 256) {
             let idx = this.scanline * 256 + this.pixel_cycle;
             // force integer division
@@ -97,7 +96,11 @@ export class Ppu2C02 {
             // syntax to accomplish this: https://stackoverflow.com/a/17218003
             let x = ~~(this.pixel_cycle / 8);
             let y = ~~(this.scanline / 8);
-            let tile = this.bus.read(PPU_NAMETABLE_START_ADDR + y * 32 + x);
+            // TODO: pull this from PPUSCROLL and nametable select
+            let start_addr = PPU_NAMETABLE_START_ADDR;
+            // pull the tile for this region of the screen
+            let tile_id = start_addr + y * 32 + x
+            let tile = this.bus.read(tile_id);
             let chr_bank = (this.control & PpuControlFlags.BG_TILE_SELECT) > 0 ? 0x1000 : 0x0;
             let tile_addr = chr_bank | (tile << 4) | (this.scanline % 8);
 
@@ -108,20 +111,46 @@ export class Ppu2C02 {
             let offset = 7 - (this.pixel_cycle % 8);
             let color_index = ((1 & (hi >> offset)) << 1) | (1 & (lo >> offset));
 
-            // finally, apply a false-color greyscale mapping
-            // TODO: implement pallete reads
-            // These come from a different region of memory, which defines the
-            // pallete mapping for each tile cluster
-            let color: u8 = 0;
-            switch (color_index) {
-                case 0x00: color = 0x00; break; // black
-                case 0x01: color = 0x7C; break; // dark gray
-                case 0x02: color = 0xBC; break; // light gray
-                case 0x03: color = 0xF8; break; // aaalllllmooosst white
+            let color: u8;
+            if (color_index === 0b00) {
+                // use the background color
+                color = this.bus.read(PPU_PALETTE_START_ADDR);
+            } else {
+                //  _____________________________________
+                // / I am 0x3-CO, you probably didn't    \
+                // \ recognize me because of the red arm /
+                //  -------------------------------------
+                //    \
+                //     \
+                //        /~\
+                //       |oo )
+                //       _\=/_
+                //      /     \
+                //     //|/.\|\\
+                //    ||  \_/  ||
+                //    || |\ /| ||
+                //     # \_ _/  #
+                //       | | |
+                //       | | |
+                //       []|[]
+                //       | | |
+                //      /_]_[_\
+                const attribute_start_addr= 0x3C0;
+
+                // Pull the pallete map from the attribute table
+                let attr_idx = start_addr + attribute_start_addr + ~~(y / 4) * 8 + ~~(x / 4);
+                let attr = this.bus.read(attr_idx);
+                let attr_shift = ((~~((tile_id % 32) / 2) % 2) + (~~(tile_id / 64) % 2) * 2) * 2;
+
+                // this gives us our index into pallete RAM
+                let palette_idx = ((attr >> attr_shift) & 0x03) * 4;
+
+                // finally, apply a color mapping from the palette
+                color = this.bus.read(PPU_PALETTE_START_ADDR + palette_idx + color_index);
             }
 
             for (let i = 0; i < 3; i++) {
-                this.frame_data[idx * 3 + i] = color;
+                this.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
             }
         }
         let nmi_enabled = (this.control & PpuControlFlags.VBLANK_NMI_ENABLE) > 0;
@@ -286,5 +315,35 @@ export class PpuControlPortMapper implements IBusDevice {
 
     public write(addr: u16, data: u8) {
         return this.ppu.control_port_write(addr + 0x2000, data);
+    }
+}
+
+/**
+ * A helper for handling some of the odd PPU palette mirrors
+ */
+class PpuPaletteRam implements IBusDevice {
+    private readonly palette_buffer = new Uint8Array(32);
+
+    public read(addr: u16): u8 {
+        let read_addr = addr;
+        switch (addr) {
+            case 0x10: read_addr = 0x00; break;
+            case 0x14: read_addr = 0x04; break;
+            case 0x18: read_addr = 0x08; break;
+            case 0x1C: read_addr = 0x0C; break;
+        }
+        return this.palette_buffer[read_addr];
+    }
+
+    public write(addr: u16, data: u8) {
+        let read_addr = addr;
+        // these sprite palette locations are actually mirrors into the bg colors
+        switch (addr) {
+            case 0x10: read_addr = 0x00; break;
+            case 0x14: read_addr = 0x04; break;
+            case 0x18: read_addr = 0x08; break;
+            case 0x1C: read_addr = 0x0C; break;
+        }
+        this.palette_buffer[read_addr] = data;
     }
 }
