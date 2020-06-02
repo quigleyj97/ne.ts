@@ -288,6 +288,117 @@ export const POWERON_CPU_STATE = Object.freeze({
 //endregion
 
 //region PPU utilities
+export interface IPpuState {
+    //#region Loopy registers
+    // These registers represent internal registers that handle numerous
+    // operations on the NES, such as PPUADDR addressing. The exact names
+    // of these variables from Loopy's "The Skinny on NES Scrolling"
+    /** The 15-bit VRAM address register */
+    v: u16;
+    /** The 15-bit temporary VRAM address register */
+    t: u16;
+    /** The 3-bit fine X scroll register */
+    x: u8;
+    /** The PPUADDR write latch */
+    w: boolean;
+    //#endregion
+
+    // The palette attribute shift registers
+    // The PPU has a pair of shift registers for tile data, one for the high bit
+    // and one for the low bit. It has another pair for the palette.
+    bg_tile_hi_shift_reg: u16;
+    bg_tile_lo_shift_reg: u16;
+    bg_attr_hi_shift_reg: u8;
+    bg_attr_lo_shift_reg: u8;
+    /** The 2-bit attribute for the next tile to render, which feeds the shift registers */
+    bg_attr_latch: 0 | 1 | 2 | 3;
+
+    //#region Byte buffers
+    // The PPU reads various parts of the rendering data at different points in
+    // a rendering lifecycle, and those are loaded into the registers at the end
+    // of an 8-cycle period. Until then, they're held in temporary registers,
+    // which the below variables model
+    temp_nt_byte: u8;
+    temp_at_byte: u8;
+    temp_bg_lo_byte: u8;
+    temp_bg_hi_byte: u8;
+    //#endregion
+
+    //#region PPU Control Registers
+    // These are registers that are exposed to the CPU bus, like $PPUSTATUS and
+    // $PPUMASK
+    /** The $PPUCTRL register */
+    control: u8;
+    /** The $PPUMASK register */
+    mask: u8;
+    /** The $PPUSTATUS register */
+    status: u8;
+    //#endregion
+
+    //#region Emulation helpers
+    /** The pixel currently being output by the PPU. */
+    pixel_cycle: number;
+    /** The scanline currently being rendered. */
+    scanline: number;
+    /** Whether the PPU has completed a frame */
+    frame_ready: boolean;
+    /** Whether a VBlank interrupt has occured */
+    vblank_nmi_ready: boolean;
+    /**
+     * Buffer containing the value of the address given in PPUADDR.
+     * 
+     * # Note
+     *
+     * Reads from regions of PPU memory (excluding the palette memory) are
+     * delayed by one clock cycle, as the PPU first _recieves_ the address,
+     * then puts that address on it's internal bus. On the _next_ cycle, it
+     * then _writes_ that value to a buffer on the CPU bus. The effect of this
+     * is that reads from the PPU take _two_ cycles instead of one.
+     *
+     * For palette memory, however, there happens to be entirely combinatorial
+     * logic to plumb this read; meaning that no clock ticking has to occur.
+     * _however_, reads will still populate the buffer! Except with name
+     */
+    ppudata_buffer: u8;
+    /** The last value put on a PPU control port */
+    last_control_port_value: u8;
+    //#endregion
+}
+
+export const PPU_POWERON_STATE = Object.freeze({
+    v: 0,
+    t: 0,
+    x: 0,
+    w: false,
+    bg_tile_hi_shift_reg: 0,
+    bg_tile_lo_shift_reg: 0,
+    bg_attr_hi_shift_reg: 0,
+    bg_attr_lo_shift_reg: 0,
+    bg_attr_latch: 0,
+    temp_nt_byte: 0,
+    temp_bg_hi_byte: 0,
+    temp_bg_lo_byte: 0,
+    temp_at_byte: 0,
+    control: 0,
+    mask: 0,
+    // magic constant given from NESDEV for PPU poweron state
+    status: 0xA0,
+    pixel_cycle: 0,
+    scanline: 0,
+    frame_ready: false,
+    vblank_nmi_ready: false,
+    last_control_port_value: 0
+} as IPpuState)
+
+/** Bitmasks for various components of a PPU register address */
+export const enum PpuAddressPart {
+    COARSE_X = 0x001F,
+    COARSE_Y = 0x03E0,
+    NAMETABLE_X = 0x0400,
+    NAMETABLE_Y = 0x0800,
+    FINE_Y = 0x7000
+}
+
 /** Bitmasks for fields of the PPU control register ($PPUCTRL) */
 export const enum PpuControlFlags {
     /// Select which nametable to use. 0 = $2000, 1 = $2400, 2 = $2800, 3 = $2C00

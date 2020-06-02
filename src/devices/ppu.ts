@@ -1,4 +1,4 @@
-import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE } from "../utils/index.js";
+import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -7,61 +7,35 @@ const PPU_NAMETABLE_MASK: u16 = 0x0FFF;
 const PPU_PALETTE_START_ADDR: u16 = 0x3F00;
 const PPU_PALETTE_END_ADDR: u16 = 0x3FFF;
 const PPU_PALETTE_MASK: u16 = 0x001F;
-
+//  _____________________________________
+// / I am 0x3-CO, you probably didn't    \
+// \ recognize me because of the red arm /
+//  -------------------------------------
+//    \
+//     \
+//        /~\
+//       |oo )
+//       _\=/_
+//      /     \
+//     //|/.\|\\
+//    ||  \_/  ||
+//    || |\ /| ||
+//     # \_ _/  #
+//       | | |
+//       | | |
+//       []|[]
+//       | | |
+//      /_]_[_\
+const ATTR_TABLE_OFFSET = 0x3C0;
 export class Ppu2C02 {
-    /// The PPU bus
+    /** The PPU bus */
     private bus: Bus;
-    /// The internal palette memory
+    /** The internal palette memory */
     private palette: PpuPaletteRam;
-    /// The write-only control register
-    private control: u8;
-    /// The mask register used for controlling various aspects of rendering
-    private mask: u8;
-    /// The read-only status register
-    private status: u8;
-    //#region Emulation helpers
-    /// The last value on the PPU bus.
-    ///
-    /// The PPU's bus to the CPU has such long traces that electrically, they
-    /// act as a latch, retaining the value of last value placed on the bus for
-    /// up to a full frame.
-    ///
-    /// It should be said that this behavior is unreliable, and no reasonable
-    /// game would ever depend on this functionality.
-    private last_bus_value: u8;
-    /// Whether the PPUADDR is filling the hi (false) or the lo byte (true).
-    ///
-    /// # Note
-    ///
-    /// Oddly, PPUADDR seems to be _big_ endian even though the rest of the NES
-    /// is little endian. I'm not sure why this is.
-    private is_ppuaddr_lo: boolean;
-    /// The address loaded into PPUADDR
-    private ppuaddr: u16;
-    /// Buffer containing the value of the address given in PPUADDR.
-    ///
-    /// # Note
-    ///
-    /// Reads from regions of PPU memory (excluding the palette memory) are
-    /// delayed by one clock cycle, as the PPU first _recieves_ the address,
-    /// then puts that address on it's internal bus. On the _next_ cycle, it
-    /// then _writes_ that value to a buffer on the CPU bus. The effect of this
-    /// is that reads from the PPU take _two_ cycles instead of one.
-    ///
-    /// For palette memory, however, there happens to be entirely combinatorial
-    /// logic to plumb this read; meaning that no clock ticking has to occur.
-    private ppudata_buffer: u8;
-    /// The pixel currently being output by the PPU.
-    private pixel_cycle: number;
-    /// The scanline currently being rendered.
-    private scanline: number;
-    /// Whether the PPU has completed a frame
-    private frame_ready: boolean;
-    /// Whether a VBlank interrupt has occured
-    private vblank_nmi_ready: boolean;
-    /// The internal framebuffer containing the rendered image, in u8 RGB
-    private frame_data: Uint8Array;
-    //#endregion
+    /** The internal state of the PPU */
+    private state: IPpuState;
+    /** The internal framebuffer containing the rendered image, in u8 RGB */
+    private readonly frame_data: Uint8Array;
 
     constructor(bus: Bus) {
         this.bus = bus;
@@ -72,125 +46,137 @@ export class Ppu2C02 {
             end: PPU_PALETTE_END_ADDR,
             mask: PPU_PALETTE_MASK
         });
-        this.control = 0;
-        this.mask = 0;
-        // magic constant given from NESDEV for PPU poweron state
-        this.status = 0xA0;
-        this.last_bus_value = 0;
-        this.is_ppuaddr_lo = false;
-        this.ppuaddr = 0;
-        this.ppudata_buffer = 0;
-        this.pixel_cycle = 0;
-        this.scanline = 0;
-        this.frame_ready = false;
-        this.vblank_nmi_ready = false;
-        this.frame_data = new Uint8Array(240 * 256 * 3);
+        this.state = { ...PPU_POWERON_STATE };
+        this.frame_data = new Uint8Array(240 * 356 * 3);
     }
 
     /** Clock the PPU, rendering to the internal framebuffer and modifying state as appropriate */
     public clock() {
-        if (this.scanline > -1 && this.scanline < 240 && this.pixel_cycle < 256) {
-            let idx = this.scanline * 256 + this.pixel_cycle;
-            // force integer division
-            // since this is very hot code, I'm using a bit of a wild bitwise
-            // syntax to accomplish this: https://stackoverflow.com/a/17218003
-            let x = ~~(this.pixel_cycle / 8);
-            let y = ~~(this.scanline / 8);
-            // TODO: pull this from PPUSCROLL and nametable select
-            let start_addr = PPU_NAMETABLE_START_ADDR;
-            // pull the tile for this region of the screen
-            let tile_id = start_addr + y * 32 + x
-            let tile = this.bus.read(tile_id);
-            let chr_bank = (this.control & PpuControlFlags.BG_TILE_SELECT) > 0 ? 0x1000 : 0x0;
-            let tile_addr = chr_bank | (tile << 4) | (this.scanline % 8);
+        if (this.state.scanline < 240 || this.state.scanline === 261) {
+            if ((this.state.pixel_cycle >= 1 && this.state.pixel_cycle < 258) || (this.state.pixel_cycle > 320 && this.state.pixel_cycle < 337)) {
+                this.update_shift_regs();
+                const CHR_BANK = (this.state.control & PpuControlFlags.BG_TILE_SELECT) << 8;
+                switch ((this.state.pixel_cycle - 1) % 8) {
+                    case 0:
+                        this.transfer_registers();
+                        this.state.temp_nt_byte = this.bus.read(PPU_NAMETABLE_START_ADDR | (this.state.v & 0x0FFF));
+                        break;
+                    case 2:
+                        // this addressing comes from NESDEV:
+                        // https://wiki.nesdev.com/w/index.php/PPU_scrolling#Tile_and_attribute_fetching
+                        this.state.temp_at_byte = this.bus.read(
+                            PPU_NAMETABLE_START_ADDR
+                            | ATTR_TABLE_OFFSET
+                            | (this.state.v & 0x0C00)
+                            | ((this.state.v >> 4) & 0x38)
+                            | ((this.state.v >> 2) & 0x07)
+                        );
+                        if (((this.state.v & PpuAddressPart.COARSE_Y) >> 5 & 0x02) > 0) {
+                            this.state.temp_at_byte >>= 4;
+                        }
+                        if (((this.state.v & PpuAddressPart.COARSE_X) & 0x02) > 0) {
+                            this.state.temp_at_byte >>= 2;
+                        }
+                        this.state.temp_at_byte &= 3;
 
-            let lo = this.bus.read(tile_addr);
-            let hi = this.bus.read(tile_addr + 8);
-            
-            // Now to pull the column, we shift right by c mod 8.
-            let offset = 7 - (this.pixel_cycle % 8);
-            let color_index = ((1 & (hi >> offset)) << 1) | (1 & (lo >> offset));
-
-            let color: u8;
-            if (color_index === 0b00) {
-                // use the background color
-                color = this.bus.read(PPU_PALETTE_START_ADDR);
-            } else {
-                //  _____________________________________
-                // / I am 0x3-CO, you probably didn't    \
-                // \ recognize me because of the red arm /
-                //  -------------------------------------
-                //    \
-                //     \
-                //        /~\
-                //       |oo )
-                //       _\=/_
-                //      /     \
-                //     //|/.\|\\
-                //    ||  \_/  ||
-                //    || |\ /| ||
-                //     # \_ _/  #
-                //       | | |
-                //       | | |
-                //       []|[]
-                //       | | |
-                //      /_]_[_\
-                const attribute_start_addr= 0x3C0;
-
-                // Pull the pallete map from the attribute table
-                let attr_idx = start_addr + attribute_start_addr + ~~(y / 4) * 8 + ~~(x / 4);
-                let attr = this.bus.read(attr_idx);
-                let attr_shift = ((~~((tile_id % 32) / 2) % 2) + (~~(tile_id / 64) % 2) * 2) * 2;
-
-                // this gives us our index into pallete RAM
-                let palette_idx = ((attr >> attr_shift) & 0x03) * 4;
-
-                // finally, apply a color mapping from the palette
-                color = this.bus.read(PPU_PALETTE_START_ADDR + palette_idx + color_index);
+                        break;
+                    case 4:
+                        this.state.temp_bg_lo_byte = this.bus.read(
+                            CHR_BANK
+                            | (this.state.temp_nt_byte << 4)
+                            | ((this.state.v & PpuAddressPart.FINE_Y) >> 12)
+                        );
+                        break;
+                    case 6:
+                        this.state.temp_bg_hi_byte = this.bus.read(
+                            CHR_BANK
+                            | (this.state.temp_nt_byte << 4)
+                            | ((this.state.v & PpuAddressPart.FINE_Y) >> 12)
+                            | 8
+                        );
+                        break;
+                    case 7:
+                        this.inc_coarse_x();
+                        break;
+                }
             }
-
+            if (this.state.pixel_cycle == 256) {
+                this.inc_fine_y();
+            }
+            if (this.state.pixel_cycle == 257) {
+                this.transfer_x_addr();
+            }
+            if (this.state.pixel_cycle === 337 || this.state.pixel_cycle === 339) {
+                // make a dummy read of the nametable bit
+                // this is important, since some mappers like MMC3 use this to
+                // clock a scanline counter
+                void this.bus.read(PPU_NAMETABLE_START_ADDR | (this.state.v & 0x0FFF));
+            }
+            // this is the pre-render scanline, it has some special handling
+            if (this.state.scanline === 261) {
+                if (this.state.pixel_cycle === 1) {
+                    this.state.status &= 0xFF & ~(PpuStatusFlags.SPRITE_0_HIT | PpuStatusFlags.SPRITE_OVERFLOW | PpuStatusFlags.VBLANK);
+                }
+                if (this.state.pixel_cycle >= 280 || this.state.pixel_cycle < 305) {
+                    this.transfer_y_addr();
+                }
+            }
+        }
+        // check if we need to set the vblank flag
+        let nmi_enabled = (this.state.control & PpuControlFlags.VBLANK_NMI_ENABLE) > 0;
+        if (this.state.scanline == 241 && this.state.pixel_cycle == 0) {
+            this.state.vblank_nmi_ready = nmi_enabled;
+            this.state.status |= PpuStatusFlags.VBLANK;
+        }
+        // this is a true render scanline
+        if (this.state.scanline < 240) {
+            let bg_pixel = 0x00;
+            let bg_palette = 0x00;
+            // render the background
+            if ((this.state.mask & PpuMaskFlags.BG_ENABLE) > 0) {
+                let bit_mux = 0x8000 >> this.state.x;
+                let pattern_hi = (this.state.bg_tile_hi_shift_reg & bit_mux) > 0 ? 1 : 0;
+                let pattern_lo = (this.state.bg_tile_lo_shift_reg & bit_mux) > 0 ? 1 : 0;
+                bg_pixel = (pattern_hi << 1) | pattern_lo;
+                let palette_hi = (this.state.bg_attr_hi_shift_reg & bit_mux) > 0 ? 1 : 0;
+                let palette_lo = (this.state.bg_attr_lo_shift_reg & bit_mux) > 0 ? 1 : 0;
+                bg_palette = (palette_hi << 1) | palette_lo;
+            }
+            const bg_color = this.bus.read(PPU_PALETTE_START_ADDR | (bg_palette << 2) | bg_pixel);
+            const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
-                this.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
+                this.frame_data[idx * 3 + i] = PALLETE_TABLE[bg_color * 3 + i];
             }
         }
-        let nmi_enabled = (this.control & PpuControlFlags.VBLANK_NMI_ENABLE) > 0;
-        if (this.scanline == 241 && this.pixel_cycle == 0) {
-            this.vblank_nmi_ready = nmi_enabled;
-            this.status |= PpuStatusFlags.VBLANK;
-        } else if (this.scanline == 262 && this.pixel_cycle == 1) {
-            this.vblank_nmi_ready = false;
-            this.status &= 0xFF & ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
+        this.state.pixel_cycle++;
+
+        if (this.state.pixel_cycle > 340) {
+            this.state.pixel_cycle = 0;
+            this.state.scanline += 1;
         }
 
-        this.pixel_cycle += 1;
+        this.state.frame_ready = false;
 
-        if (this.pixel_cycle > 340) {
-            this.pixel_cycle = 0;
-            this.scanline += 1;
-        }
-
-        this.frame_ready = false;
-
-        if (this.scanline > 260) {
-            // The "-1" scanline is special, and rendering should handle it differently
-            this.scanline = -1;
-            this.frame_ready = true;
+        if (this.state.scanline > 261) {
+            // The "0" scanline is special, and rendering should handle it differently
+            this.state.scanline = 0;
+            this.state.frame_ready = true;
         }
     }
 
     /** Whether a VBlank NMI has occured. This should be plumbed to the CPU. */
     public is_vblank() {
-        return this.vblank_nmi_ready;
+        return this.state.vblank_nmi_ready;
     }
 
     /** Acknowledge the vblank NMI, so that the PPU stops asserting it */
     public ack_vblank() {
-        this.vblank_nmi_ready = false;
+        this.state.vblank_nmi_ready = false;
     }
 
     /** Whether the PPU has completely rendered a frame. */
     public is_frame_ready() {
-        return this.frame_ready;
+        return this.state.frame_ready;
     }
 
     /** Retrieve a copy of the current frame */
@@ -205,27 +191,37 @@ export class Ppu2C02 {
     public control_port_read(port_addr: u16): u8 {
         switch (port_addr) {
             case PpuControlPorts.PPUSTATUS: {
-                let status = this.status | (PpuStatusFlags.STATUS_IGNORED & this.last_bus_value);
-                this.status &= 0xFF & ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
-                this.is_ppuaddr_lo = false;
-                this.vblank_nmi_ready = false;
-                this.last_bus_value = status;
+                let status = this.state.status | (PpuStatusFlags.STATUS_IGNORED & this.state.last_control_port_value);
+                this.state.status &= 0xFF & ~(PpuStatusFlags.VBLANK | PpuStatusFlags.STATUS_IGNORED);
+                this.state.w = false;
+                this.state.vblank_nmi_ready = false;
+                this.state.last_control_port_value = status;
                 return status;
             }
             case PpuControlPorts.OAMDATA: {
                 // console.warn(" [WARN] $OAMDATA not implemented (yet)");
-                return this.last_bus_value;
+                return this.state.last_control_port_value;
             }
             case PpuControlPorts.PPUDATA: {
                 // For most addresses, we need to buffer the response in internal
                 // memory, since the logic for PPUDATA reads isn't actually
                 // combinatorial and requires some plumbing (except for palette
                 // memory, which is special)
-                const addr = this.ppuaddr;
-                if ((0xFF & (this.control & PpuControlFlags.VRAM_INCREMENT_SELECT)) !== 0) {
-                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 32);
+                const addr = this.state.v;
+
+                if (!this.is_rendering()) {
+                    if ((0xFF & (this.state.control & PpuControlFlags.VRAM_INCREMENT_SELECT)) !== 0) {
+                        this.state.v = 0x7FFF & (this.state.v + 32);
+                    } else {
+                        this.state.v = 0x7FFF & (this.state.v + 1);
+                    }
                 } else {
-                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 1);
+                    console.warn(" [INFO] Read from PPUDATA during render");
+                    // Since we're writing during rendering, the PPU will
+                    // increment both the coarse X and fine Y due to how the
+                    // PPU is wired
+                    this.inc_coarse_x();
+                    this.inc_fine_y();
                 }
                 if (port_addr >= 0x3F00) {
                     // This is palette memory, don't buffer...
@@ -237,16 +233,16 @@ export class Ppu2C02 {
                     // 0x3F00. So let's do that after setting data, just in case
                     // anything needs that...
                     let data = this.bus.read(addr);
-                    this.ppudata_buffer = this.bus.read(addr & (0xFFFF & ~0x1000));
-                    this.last_bus_value = data;
+                    this.state.ppudata_buffer = this.bus.read(addr & 0x0FFF);
+                    this.state.last_control_port_value = data;
                     return data;
                 }
-                let data = this.ppudata_buffer;
-                this.ppudata_buffer = this.bus.read(addr);
-                this.last_bus_value = data;
+                let data = this.state.ppudata_buffer;
+                this.state.ppudata_buffer = this.bus.read(addr);
+                this.state.last_control_port_value = data;
                 return data;
             }
-            default: return this.last_bus_value;
+            default: return this.state.last_control_port_value;
         }
     }
 
@@ -255,17 +251,22 @@ export class Ppu2C02 {
      * Addresses should be given in CPU Bus addresses (eg, $PPUCTRL)
      */
     public control_port_write(port_addr: u16, data: u8) {
-        this.last_bus_value = data;
+        this.state.last_control_port_value = data;
         switch(port_addr) {
             // TODO: pre-boot cycle check
             // TODO: simulate immediate NMI hardware bug
             // TODO: Bit 0 race condition
             // TODO: Complain loudly when BG_COLOR_SELECT is set
+            // The exact writes to T and V come from NESDEV documentation on
+            // how the internal PPU registers work:
+            // https://wiki.nesdev.com/w/index.php/PPU_scrolling
             case PpuControlPorts.PPUCTRL:
-                this.control = data;
+                this.state.control = data;
+                this.state.t &= (0x7FFF & ~(PpuAddressPart.NAMETABLE_X |  PpuAddressPart.NAMETABLE_Y));
+                this.state.t |= (data & PpuControlFlags.NAMETABLE_BASE_SELECT) << 10;
                 return;
             case PpuControlPorts.PPUMASK:
-                this.mask = data;
+                this.state.mask = data;
                 return;
             case PpuControlPorts.OAMADDR:
                 console.warn(" [WARN] $OAMADDR not implemented");
@@ -274,28 +275,141 @@ export class Ppu2C02 {
                 console.warn(" [WARN] $OAMDATA not implemented");
                 return;
             case PpuControlPorts.PPUSCROLL:
-                console.warn(" [WARN] $PPUSCROLL not implemented");
+                if (!this.state.w) {
+                    this.state.x = data & 0x07;
+                    this.state.t &= 0xFFFF & ~PpuAddressPart.COARSE_X;
+                    this.state.t |= (data >> 3) & PpuAddressPart.COARSE_X;
+                    this.state.w = true;
+                } else {
+                    this.state.t &= 0xFFFF & (~(PpuAddressPart.FINE_Y | PpuAddressPart.COARSE_Y));
+                    this.state.t |= ((0x07 & data) << 12) | ((data & 0xF8) << 2);
+                    this.state.w = false;
+                }
                 return;
             case PpuControlPorts.PPUADDR: {
-                if (this.is_ppuaddr_lo) {
-                    this.is_ppuaddr_lo = false;
-                    this.ppuaddr = (0xFF00 & this.ppuaddr) | (0xFF & data);
+                if (!this.state.w) {
+                    this.state.t &= 0x00FF;
+                    this.state.t |= (data & 0x3F) << 8;
+                    this.state.w = true;
                 } else {
-                    this.is_ppuaddr_lo = true;
-                    this.ppuaddr = (0xFF & this.ppuaddr) | 0x3F00 & (data << 8);
+                    this.state.t &= 0xFF00;
+                    this.state.t |= data;
+                    this.state.v = this.state.t;
+                    this.state.w = false;
                 }
                 return;
             }
             case PpuControlPorts.PPUDATA: {
-                this.bus.write(this.ppuaddr, data);
-                if ((0xFF & (this.control & PpuControlFlags.VRAM_INCREMENT_SELECT)) !== 0) {
-                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 32);
+                this.bus.write(this.state.v, data);
+                if (!this.is_rendering()) {
+                    if ((this.state.control & PpuControlFlags.VRAM_INCREMENT_SELECT) > 0) {
+                        this.state.v = 0x7FFF & (this.state.v + 32);
+                    } else {
+                        this.state.v = 0x7FFF & (this.state.v + 1);
+                    }
                 } else {
-                    this.ppuaddr = 0xFFFF & (this.ppuaddr + 1);
+                    console.warn(" [INFO] Write to PPUDATA during render");
+                    // Since we're writing during rendering, the PPU will
+                    // increment both the coarse X and fine Y due to how the
+                    // PPU is wired
+                    this.inc_coarse_x();
+                    this.inc_fine_y();
                 }
                 return;
             }
         };
+    }
+
+    /** Returns true if rendering is enabled and the PPU is in the visible region */
+    private is_rendering() {
+        return (this.state.mask & (PpuMaskFlags.BG_ENABLE | PpuMaskFlags.SPRITE_ENABLE)) > 0
+            && this.state.scanline > -1
+            && this.state.scanline < 240;
+    }
+
+    /** Increment the coarse X register */
+    private inc_coarse_x() {
+        if ((this.state.mask & (PpuMaskFlags.BG_ENABLE | PpuMaskFlags.SPRITE_ENABLE)) === 0) {
+            return;
+        }
+        if ((this.state.v & PpuAddressPart.COARSE_X) == 31) {
+            // clear the coarse X and invert the X nametable
+            this.state.v &= 0xFFFF & ~PpuAddressPart.COARSE_X;
+            this.state.v ^= PpuAddressPart.NAMETABLE_X;
+        } else {
+            // increment coarse X directly
+            this.state.v += 1;
+        }
+    }
+
+    /** Increment the fine Y register */
+    private inc_fine_y() {
+        if ((this.state.mask & (PpuMaskFlags.BG_ENABLE | PpuMaskFlags.SPRITE_ENABLE)) === 0) {
+            return;
+        }
+        if ((this.state.v & PpuAddressPart.FINE_Y) != 0x7000) {
+            // if the fine Y is less than 7, we can increment it directly
+            this.state.v += 0x1000;
+        } else {
+            // clear fine Y and attempt to increment coarse Y
+            this.state.v &= 0xFFFF & ~PpuAddressPart.FINE_Y
+            let new_y = (this.state.v & PpuAddressPart.COARSE_Y) >> 5;
+            if (new_y === 29) {
+                // flip nametables
+                new_y = 0;
+                this.state.v ^= PpuAddressPart.NAMETABLE_Y;
+            } else if (new_y == 31) {
+                // a weird quirk of the PPU is that it allows setting coarse Y
+                // out-of-bounds. When the coarse Y increments to 31 (where it
+                // would overflow), the PPU doesn't switch the nametable. This
+                // is, in effect, a "negative" scroll value of sorts.
+                new_y = 0;
+            } else {
+                new_y += 1;
+            }
+            this.state.v &= (0xFFFF & ~PpuAddressPart.COARSE_Y);
+            this.state.v |= new_y << 5;
+        }
+    }
+
+    private transfer_registers() {
+        this.state.bg_tile_lo_shift_reg = (this.state.bg_tile_lo_shift_reg & 0xFF00) | this.state.temp_bg_lo_byte;
+        this.state.bg_tile_hi_shift_reg = (this.state.bg_tile_hi_shift_reg & 0xFF00) | this.state.temp_bg_hi_byte;
+        this.state.bg_attr_latch = (this.state.temp_at_byte) as 0 | 1 | 2 | 3;
+    }
+
+    private update_shift_regs() {
+        if ((this.state.mask & PpuMaskFlags.BG_ENABLE) === 0) {
+            return;
+        }
+        this.state.bg_tile_hi_shift_reg <<= 1;
+        this.state.bg_tile_hi_shift_reg &= 0xFFFF;
+        this.state.bg_tile_lo_shift_reg <<= 1;
+        this.state.bg_tile_lo_shift_reg &= 0xFFFF;
+        this.state.bg_attr_lo_shift_reg <<= 1;
+        this.state.bg_attr_lo_shift_reg |= (this.state.bg_attr_latch & 0x01);
+        this.state.bg_attr_lo_shift_reg &= 0xFFFF;
+        this.state.bg_attr_hi_shift_reg <<= 1;
+        this.state.bg_attr_hi_shift_reg |= (this.state.bg_attr_latch & 0x02) >> 1;
+        this.state.bg_attr_hi_shift_reg &= 0xFFFF;
+    }
+
+    private transfer_x_addr() {
+        if ((this.state.mask & (PpuMaskFlags.BG_ENABLE | PpuMaskFlags.SPRITE_ENABLE)) === 0) {
+            return;
+        }
+        const X_ADDR_PART = PpuAddressPart.COARSE_X | PpuAddressPart.NAMETABLE_X
+        this.state.v &= 0xFFFF & ~X_ADDR_PART;
+        this.state.v |= this.state.t & X_ADDR_PART;
+    }
+
+    private transfer_y_addr() {
+        if ((this.state.mask & (PpuMaskFlags.BG_ENABLE | PpuMaskFlags.SPRITE_ENABLE)) === 0) {
+            return;
+        }
+        const Y_ADDR_PART = PpuAddressPart.FINE_Y | PpuAddressPart.NAMETABLE_Y | PpuAddressPart.COARSE_Y;
+        this.state.v &= 0xFFFF & ~Y_ADDR_PART;
+        this.state.v |= this.state.t & Y_ADDR_PART;
     }
 }
 
