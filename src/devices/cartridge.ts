@@ -6,7 +6,7 @@
 /// generally be based on the mapper behind them.
 
 import { IBusDevice } from "../utils/addr.js";
-import { parse_ines_header, INesHeader } from "../utils/ines.js";
+import { parse_ines_header, INesHeader, INesFlags6, INesFlags7 } from "../utils/ines.js";
 
 export interface ICartridge {
     /** The CHR rom, for mounting on the PPU bus */
@@ -22,7 +22,7 @@ export class NROMCartridge implements ICartridge {
         const prg_end = 16 + 0x4000 * prg_size;
         const prg_buffer = buf.slice(16, prg_end);
         const chr_buffer = buf.slice(prg_end, prg_end + 0x2000);
-        return new NROMCartridge(chr_buffer, prg_buffer, prg_size === 1, (flags_6 & 0x01) === 0);
+        return new NROMCartridge(chr_buffer, prg_buffer, prg_size === 1, (flags_6 & INesFlags6.MIRRORING) === 0);
     }
 
     private readonly chr_buffer: Uint8Array;
@@ -38,16 +38,32 @@ export class NROMCartridge implements ICartridge {
         this.prg_buffer = prg_buffer;
         this.nametable = new Uint8Array(0x800);
         this.use_horizontal_mirroring = use_horizontal_mirroring;
-
         this.is_16k = is_16k;
         this.chr = {
             read: (addr) => {
                 if (addr < 0x2000) return this.chr_buffer[addr];
-                return this.nametable[(addr - 0x2000) & (0xFFFF & (this.use_horizontal_mirroring ? ~0x400 : ~0x800))];
+                let nt_addr = addr - 0x2000;
+                if (this.use_horizontal_mirroring) {
+                    // horizontal mirroring is done by wiring address pin 11 to
+                    // CIRAM 10, meaning bit 11 is moved to where bit 10 is and
+                    // the old bit 10 is dropped into the shadow realm
+                    nt_addr &= 0x3FF
+                    nt_addr |= (0x800 & addr) >> 1;
+                } else {
+                    nt_addr &= 0x7FF;
+                }
+                return this.nametable[nt_addr];
             },
             write: (addr, data) => {
                 if (addr < 0x2000) return; // no-op: this is a ROM
-                this.nametable[(addr - 0x2000) & (0xFFFF & (this.use_horizontal_mirroring ? ~0x400 : ~0x800))] = data;
+                let nt_addr = addr - 0x2000;
+                if (this.use_horizontal_mirroring) {
+                    nt_addr &= 0x3FF
+                    nt_addr |= (0x800 & addr) >> 1;
+                } else {
+                    nt_addr &= 0x7FF;
+                }
+                this.nametable[nt_addr] = data;
             }
         };
         this.prg = {
@@ -65,7 +81,8 @@ export class CartridgeMapperFactory {
 
     public static from_buffer(buf: Uint8Array) {
         const header = parse_ines_header(buf);
-        const mapper = ((header.flags_6 & 0xF0) >> 4) + (header.flags_7 & 0xF0);
+        const mapper = (header.flags_6 & INesFlags6.LOWER_MAPPER_NIBBLE)
+            | ((header.flags_7 & INesFlags7.UPPER_MAPPER_NIBBLE) >> 4);
         const factory = this.mapperRegistry.get(mapper);
         if (factory == null) {
             throw Error("No mapper registered for iNES Mapper " + mapper);
