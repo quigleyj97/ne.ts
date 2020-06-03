@@ -4,6 +4,7 @@ import { ICartridge } from "./cartridge.js";
 import { Bus } from "./bus.js";
 import { Ppu2C02, PpuControlPortMapper } from "./ppu.js";
 import { ControllerDMAAdaptor, ControllerButton } from "./controller.js";
+import { OamDmaController } from "./dma.js";
 
 /** A class representing the NES as a whole */
 export class NesEmulator {
@@ -11,6 +12,7 @@ export class NesEmulator {
     private ppu: Ppu2C02;
     private ppuMapper: PpuControlPortMapper;
     private controller_dma: ControllerDMAAdaptor;
+    private oam_dma: OamDmaController;
     private ram: Ram;
     private cart: ICartridge;
     private cycles = 0;
@@ -56,6 +58,13 @@ export class NesEmulator {
             mask: 0x0007
         });
         this.cpu = new Cpu6502(cpuBus);
+        this.oam_dma = new OamDmaController(this.cpu, this.ppu);
+        cpuBus.map_device({
+            dev: this.oam_dma,
+            start: OamDmaController.ADDRESS,
+            end: OamDmaController.ADDRESS,
+            mask: 0xFFFF
+        });
     }
 
     public run_frame() {
@@ -91,9 +100,9 @@ export class NesEmulator {
             this.ppu.ack_vblank();
         }
         if (this.cycles % 3 === 0) {
-            if (this.is_cpu_idle) {
-                // flip this since tick is hot- assume-branch-taken
-                this.controller_dma.tick();
+            this.controller_dma.tick();
+            this.oam_dma.tick();
+            if (this.is_cpu_idle && !this.oam_dma.is_dma_active) {
                 if (!debug) {
                     this.cpu.exec();
                 } else {

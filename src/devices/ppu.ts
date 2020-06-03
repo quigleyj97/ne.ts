@@ -34,6 +34,8 @@ export class Ppu2C02 {
     private palette: PpuPaletteRam;
     /** The internal state of the PPU */
     private state: IPpuState;
+    /** The internal OAM memory */
+    private readonly oam: Uint8Array;
     /** The internal framebuffer containing the rendered image, in u8 RGB */
     private readonly frame_data: Uint8Array;
 
@@ -48,6 +50,7 @@ export class Ppu2C02 {
         });
         this.state = { ...PPU_POWERON_STATE };
         this.frame_data = new Uint8Array(240 * 356 * 3);
+        this.oam = new Uint8Array(256);
     }
 
     /** Clock the PPU, rendering to the internal framebuffer and modifying state as appropriate */
@@ -194,6 +197,11 @@ export class Ppu2C02 {
         return this.frame_data.slice();
     }
 
+    /** Write a byte to the OAM */
+    public write_oam(addr: u8, data: u8) {
+        this.oam[addr] = data;
+    }
+
     /** Read data from a control port on the PPU.
      * 
      * Addresses should be given in CPU Bus addresses (eg, $PPUCTRL)
@@ -209,8 +217,8 @@ export class Ppu2C02 {
                 return status;
             }
             case PpuControlPorts.OAMDATA: {
-                // console.warn(" [WARN] $OAMDATA not implemented (yet)");
-                return this.state.last_control_port_value;
+                // TODO: OAMDATA reads, like OAMADDR writes, also corrupt OAM
+                return this.oam[this.state.oam_addr];
             }
             case PpuControlPorts.PPUDATA: {
                 // For most addresses, we need to buffer the response in internal
@@ -279,10 +287,13 @@ export class Ppu2C02 {
                 this.state.mask = data;
                 return;
             case PpuControlPorts.OAMADDR:
-                console.warn(" [WARN] $OAMADDR not implemented");
+                // TODO: OAMADDR writes corrupt the OAM in particular ways, which
+                // I might need to implement
+                this.state.oam_addr = data;
                 return;
             case PpuControlPorts.OAMDATA:
-                console.warn(" [WARN] $OAMDATA not implemented");
+                // TODO: OAMDATA writes, like OAMADDR writes, also corrupt OAM
+                this.oam[this.state.oam_addr] = data;
                 return;
             case PpuControlPorts.PPUSCROLL:
                 if (!this.state.w) {

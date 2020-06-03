@@ -336,6 +336,8 @@ export interface IPpuState {
     //#endregion
 
     //#region Emulation helpers
+    /** The OAM address byte */
+    oam_addr: u8;
     /** The pixel currently being output by the PPU. */
     pixel_cycle: number;
     /** The scanline currently being rendered. */
@@ -370,6 +372,7 @@ export const PPU_POWERON_STATE = Object.freeze({
     t: 0,
     x: 0,
     w: false,
+    oam_addr: 0,
     bg_tile_hi_shift_reg: 0,
     bg_tile_lo_shift_reg: 0,
     bg_attr_hi_shift_reg: 0,

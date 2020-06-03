@@ -9,6 +9,8 @@ export class Cpu6502 {
     public state: ICpuState = { ...POWERON_CPU_STATE };
     private bus: Bus;
     private cycles: number = 0;
+    /** a flip-flop to help with synchronization */
+    private _is_odd_cycle: boolean = false;
     private interrupt_pending: boolean = false;
     private maskable_interrupt: boolean = false;
 
@@ -23,9 +25,15 @@ export class Cpu6502 {
         if ((this.cycles > 0)) {
             this.state.tot_cycles += 1;
             this.cycles -= 1;
+            this._is_odd_cycle = !this._is_odd_cycle;
             return false;
         }
         return true;
+    }
+
+    /** Add a cycle to the CPU emulator without doing anything */
+    public tock() {
+        this.cycles++;
     }
 
     public exec() {
@@ -88,6 +96,21 @@ export class Cpu6502 {
         this.maskable_interrupt = false;
     }
 
+    public is_odd_cycle() {
+        return this._is_odd_cycle;
+    }
+
+    /// Read a byte from the bus, adding one to the cycle time
+    public read_bus(addr: u16): u8 {
+        this.cycles += 1;
+        return this.bus.read(addr);
+    }
+
+    public write_bus(addr: u16, data: u8) {
+        this.cycles += 1;
+        this.bus.write(addr, data);
+    }
+
     private load_opcode() {
         let opcode = this.read_bus(this.state.pc);
         let op1 = this.read_bus(0xFFFF & (this.state.pc + 1));
@@ -101,17 +124,6 @@ export class Cpu6502 {
 
     private decode_opcode(instruction: number) {
         ([this.state.addr_mode, this.state.instr] = decode_instruction(instruction & 0xFF));
-    }
-
-    /// Read a byte from the bus, adding one to the cycle time
-    private read_bus(addr: u16): u8 {
-        this.cycles += 1;
-        return this.bus.read(addr);
-    }
-
-    private write_bus(addr: u16, data: u8) {
-        this.cycles += 1;
-        this.bus.write(addr, data);
     }
 
     /// Read the data at the resolved address
