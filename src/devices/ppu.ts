@@ -129,7 +129,10 @@ export class Ppu2C02 {
             this.state.status |= PpuStatusFlags.VBLANK;
         }
         // this is a true render scanline
-        if (this.state.scanline < 240) {
+        if (this.state.scanline < 240 && this.state.pixel_cycle > 3 && this.state.scanline < 257) {
+            // interestingly enough, pixel output doesn't begin until cycle _4_.
+            // this comes from NESDEV:
+            // https://wiki.nesdev.com/w/index.php/NTSC_video
             let bg_pixel = 0x00;
             let bg_palette = 0x00;
             // render the background
@@ -146,6 +149,13 @@ export class Ppu2C02 {
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
                 this.frame_data[idx * 3 + i] = PALLETE_TABLE[bg_color * 3 + i];
+            }
+        } else if (this.state.pixel_cycle < 4) {
+            const idx = this.state.scanline * 256 + this.state.pixel_cycle;
+            for (let i = 0; i < 3; i++) {
+                // fill with black for now
+                // technically this should actually be the background color
+                this.frame_data[idx * 3 + i] = 0;
             }
         }
         this.state.pixel_cycle++;
