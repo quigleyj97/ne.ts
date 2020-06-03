@@ -71,7 +71,7 @@ export class Ppu2C02 {
                             | ((this.state.v >> 4) & 0x38)
                             | ((this.state.v >> 2) & 0x07)
                         );
-                        if (((this.state.v & PpuAddressPart.COARSE_Y) >> 5 & 0x02) > 0) {
+                        if ((((this.state.v & PpuAddressPart.COARSE_Y) >> 5) & 0x02) > 0) {
                             this.state.temp_at_byte >>= 4;
                         }
                         if (((this.state.v & PpuAddressPart.COARSE_X) & 0x02) > 0) {
@@ -386,6 +386,10 @@ export class Ppu2C02 {
         this.state.bg_tile_lo_shift_reg = (this.state.bg_tile_lo_shift_reg & 0xFF00) | this.state.temp_bg_lo_byte;
         this.state.bg_tile_hi_shift_reg = (this.state.bg_tile_hi_shift_reg & 0xFF00) | this.state.temp_bg_hi_byte;
         this.state.bg_attr_latch = (this.state.temp_at_byte) as 0 | 1 | 2 | 3;
+        this.state.bg_attr_lo_shift_reg &= 0xFF00;
+        this.state.bg_attr_lo_shift_reg |= 0xFF * (this.state.bg_attr_latch & 0x01);
+        this.state.bg_attr_hi_shift_reg &= 0xFF00;
+        this.state.bg_attr_hi_shift_reg |= 0xFF *  ((this.state.bg_attr_latch & 0x02) >> 1);
     }
 
     private update_shift_regs() {
@@ -397,10 +401,8 @@ export class Ppu2C02 {
         this.state.bg_tile_lo_shift_reg <<= 1;
         this.state.bg_tile_lo_shift_reg &= 0xFFFF;
         this.state.bg_attr_lo_shift_reg <<= 1;
-        this.state.bg_attr_lo_shift_reg |= (this.state.bg_attr_latch & 0x01);
         this.state.bg_attr_lo_shift_reg &= 0xFFFF;
         this.state.bg_attr_hi_shift_reg <<= 1;
-        this.state.bg_attr_hi_shift_reg |= (this.state.bg_attr_latch & 0x02) >> 1;
         this.state.bg_attr_hi_shift_reg &= 0xFFFF;
     }
 
