@@ -34,14 +34,14 @@ export class OamDmaController implements IBusDevice {
         }
         if (!is_odd_cycle) {
             this.dma_data = this.cpu.read_bus((this.page << 8) | this.addr);
-            this.addr = 0xFF & (this.addr + 1);
         } else {
             this.ppu.write_oam(this.addr, this.dma_data);
+            this.addr = 0xFF & (this.addr + 1);
+            if (this.addr == 0x00) {
+                this.is_dummy_cycle = true;
+                this._is_dma_active = false;
+            }
             this.cpu.tock();
-        }
-        if (this.addr == 0x00) {
-            this.is_dummy_cycle = true;
-            this._is_dma_active = false;
         }
     }
 
