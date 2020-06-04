@@ -303,15 +303,22 @@ export interface IPpuState {
     w: boolean;
     //#endregion
 
-    // The palette attribute shift registers
+    //#region Rendering shift registers
     // The PPU has a pair of shift registers for tile data, one for the high bit
     // and one for the low bit. It has another pair for the palette.
+    // Sprites get their own shift registers and counters
     bg_tile_hi_shift_reg: u16;
     bg_tile_lo_shift_reg: u16;
     bg_attr_hi_shift_reg: u8;
     bg_attr_lo_shift_reg: u8;
     /** The 2-bit attribute for the next tile to render, which feeds the shift registers */
     bg_attr_latch: 0 | 1 | 2 | 3;
+    // The 8 tile shift registers for the 8 sprites
+    sprite_tile_hi_shift_regs: Uint16Array,
+    sprite_tile_lo_shift_regs: Uint16Array,
+    sprite_attributes: Uint8Array,
+    sprite_positions: Uint8Array,
+    //#endregion
 
     //#region Byte buffers
     // The PPU reads various parts of the rendering data at different points in
@@ -322,6 +329,7 @@ export interface IPpuState {
     temp_at_byte: u8;
     temp_bg_lo_byte: u8;
     temp_bg_hi_byte: u8;
+    temp_oam_byte: u8;
     //#endregion
 
     //#region PPU Control Registers
@@ -338,12 +346,18 @@ export interface IPpuState {
     //#region Emulation helpers
     /** The OAM address byte */
     oam_addr: u8;
+    /** The internal OAM memory */
+    oam: Uint8Array;
+    /** The secondary OAM used for sprite evaluation */
+    secondary_oam: Uint8Array;
     /** The pixel currently being output by the PPU. */
     pixel_cycle: number;
     /** The scanline currently being rendered. */
     scanline: number;
     /** Whether the PPU has completed a frame */
     frame_ready: boolean;
+    /** The internal framebuffer containing the rendered image, in u8 RGB */
+    frame_data: Uint8Array;
     /** Whether a VBlank interrupt has occured */
     vblank_nmi_ready: boolean;
     /**
@@ -367,7 +381,7 @@ export interface IPpuState {
     //#endregion
 }
 
-export const PPU_POWERON_STATE = Object.freeze({
+export const PPU_POWERON_STATE: Readonly<IPpuState> = Object.freeze({
     v: 0,
     t: 0,
     x: 0,
@@ -378,20 +392,29 @@ export const PPU_POWERON_STATE = Object.freeze({
     bg_attr_hi_shift_reg: 0,
     bg_attr_lo_shift_reg: 0,
     bg_attr_latch: 0,
+    sprite_tile_hi_shift_regs: new Uint16Array(8),
+    sprite_tile_lo_shift_regs: new Uint16Array(8),
+    sprite_attributes: new Uint8Array(8),
+    sprite_positions: new Uint8Array(8),
+    ppudata_buffer: 0,
     temp_nt_byte: 0,
     temp_bg_hi_byte: 0,
     temp_bg_lo_byte: 0,
     temp_at_byte: 0,
+    temp_oam_byte: 0,
     control: 0,
     mask: 0,
     // magic constant given from NESDEV for PPU poweron state
     status: 0xA0,
+    oam: new Uint8Array(256),
+    secondary_oam: new Uint8Array(64),
     pixel_cycle: 0,
     scanline: 0,
     frame_ready: false,
+    frame_data: new Uint8Array(240 * 256 * 3),
     vblank_nmi_ready: false,
-    last_control_port_value: 0
-} as IPpuState)
+    last_control_port_value: 0,
+})
 
 /** Bitmasks for various components of a PPU register address */
 export const enum PpuAddressPart {

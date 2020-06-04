@@ -1,4 +1,4 @@
-import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags } from "../utils/index.js";
+import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -34,10 +34,6 @@ export class Ppu2C02 {
     private palette: PpuPaletteRam;
     /** The internal state of the PPU */
     private state: IPpuState;
-    /** The internal OAM memory */
-    private readonly oam: Uint8Array;
-    /** The internal framebuffer containing the rendered image, in u8 RGB */
-    private readonly frame_data: Uint8Array;
 
     constructor(bus: Bus) {
         this.bus = bus;
@@ -48,9 +44,7 @@ export class Ppu2C02 {
             end: PPU_PALETTE_END_ADDR,
             mask: PPU_PALETTE_MASK
         });
-        this.state = { ...PPU_POWERON_STATE };
-        this.frame_data = new Uint8Array(240 * 356 * 3);
-        this.oam = new Uint8Array(256);
+        this.state = deep_copy(PPU_POWERON_STATE);
     }
 
     /** Clock the PPU, rendering to the internal framebuffer and modifying state as appropriate */
@@ -151,14 +145,14 @@ export class Ppu2C02 {
             const bg_color = this.bus.read(PPU_PALETTE_START_ADDR | (bg_palette << 2) | bg_pixel);
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
-                this.frame_data[idx * 3 + i] = PALLETE_TABLE[bg_color * 3 + i];
+                this.state.frame_data[idx * 3 + i] = PALLETE_TABLE[bg_color * 3 + i];
             }
         } else if (this.state.pixel_cycle < 4) {
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
                 // fill with black for now
                 // technically this should actually be the background color
-                this.frame_data[idx * 3 + i] = 0;
+                this.state.frame_data[idx * 3 + i] = 0;
             }
         }
         this.state.pixel_cycle++;
@@ -194,12 +188,12 @@ export class Ppu2C02 {
 
     /** Retrieve a copy of the current frame */
     public get_buffer() {
-        return this.frame_data.slice();
+        return this.state.frame_data.slice();
     }
 
     /** Write a byte to the OAM */
     public write_oam(addr: u8, data: u8) {
-        this.oam[addr] = data;
+        this.state.oam[addr] = data;
     }
 
     /** Read data from a control port on the PPU.
@@ -218,7 +212,7 @@ export class Ppu2C02 {
             }
             case PpuControlPorts.OAMDATA: {
                 // TODO: OAMDATA reads, like OAMADDR writes, also corrupt OAM
-                return this.oam[this.state.oam_addr];
+                return this.state.oam[this.state.oam_addr];
             }
             case PpuControlPorts.PPUDATA: {
                 // For most addresses, we need to buffer the response in internal
@@ -293,7 +287,7 @@ export class Ppu2C02 {
                 return;
             case PpuControlPorts.OAMDATA:
                 // TODO: OAMDATA writes, like OAMADDR writes, also corrupt OAM
-                this.oam[this.state.oam_addr] = data;
+                this.state.oam[this.state.oam_addr] = data;
                 return;
             case PpuControlPorts.PPUSCROLL:
                 if (!this.state.w) {
