@@ -1,6 +1,5 @@
 export function deep_copy<T = unknown>(obj: T): T {
     switch (typeof obj) {
-        case "bigint":
         case "boolean":
         case "number":
         case "string":
