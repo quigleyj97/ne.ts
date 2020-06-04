@@ -277,7 +277,7 @@ export const POWERON_CPU_STATE = Object.freeze({
     x: 0,
     y: 0,
     stack: 0xFD,
-    pc: 0xC000,
+    pc: 0,
     status: 0x24,
     tot_cycles: 7,
     instruction: 0xEA,

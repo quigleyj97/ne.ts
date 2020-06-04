@@ -11,6 +11,15 @@ describe("Cpu", () => {
 
     beforeEach(() => {
         bus = new Bus();
+        bus.map_device({
+            dev: {
+                read: () => 0,
+                write: () => void 0
+            },
+            start: 0x0000,
+            end: 0xFFFF,
+            mirror: 0xFFFF
+        });
         cpu = new Cpu6502(bus);
     });
     
