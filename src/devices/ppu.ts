@@ -1,4 +1,4 @@
-import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy } from "../utils/index.js";
+import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy, PpuOamByteOffsets, PpuOamAttributes } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -50,6 +50,7 @@ export class Ppu2C02 {
     /** Clock the PPU, rendering to the internal framebuffer and modifying state as appropriate */
     public clock() {
         if (this.state.scanline < 240 || this.state.scanline === 261) {
+            //#region Background evaluation
             if ((this.state.pixel_cycle >= 1 && this.state.pixel_cycle < 258) || (this.state.pixel_cycle > 320 && this.state.pixel_cycle < 337)) {
                 this.update_shift_regs();
                 const CHR_BANK = (this.state.control & PpuControlFlags.BG_TILE_SELECT) << 8;
@@ -97,17 +98,56 @@ export class Ppu2C02 {
                         break;
                 }
             }
-            if (this.state.pixel_cycle == 256) {
-                this.inc_fine_y();
-            }
-            if (this.state.pixel_cycle == 257) {
-                this.transfer_x_addr();
-            }
             if (this.state.pixel_cycle === 337 || this.state.pixel_cycle === 339) {
                 // make a dummy read of the nametable bit
                 // this is important, since some mappers like MMC3 use this to
                 // clock a scanline counter
                 void this.bus.read(PPU_NAMETABLE_START_ADDR | (this.state.v & 0x0FFF));
+            }
+            //#endregion
+
+            //#region Sprite evaluation
+            // I'm cheating here, technically the sprite evaluation is pipelined
+            // just like the background, but I'm gonna implement that later
+            if (this.state.pixel_cycle === 258) {
+                // clear the secondary OAM
+                this.state.secondary_oam.fill(0xFF);
+                let n_sprites = 0;
+                let byte_addr = 0;
+                for (let sprite = ~~(this.state.oam_addr / 4); sprite < 64; sprite++) {
+                    const diff = this.state.scanline - this.state.oam[sprite * 4];
+                    if (diff >= 0 && diff < (!!(this.state.control & PpuControlFlags.SPRITE_MODE_SELECT) ? 16 : 8)) {
+                        // this sprite is visible
+                        n_sprites++;
+                        if (n_sprites == 8) {
+                            // TODO: Sprite Overflow bug
+                            // for now this is an incorrectly correct setup
+                            this.state.status |= PpuStatusFlags.SPRITE_OVERFLOW;
+                            break;
+                        }
+                        for (let i = 0; i < 4; i++) {
+                            this.state.secondary_oam[(n_sprites - 1) * 4 + i] = this.state.oam[sprite * 4 + i];
+                        }
+                    }
+                }
+                // prepare the shifters for rendering
+                for (let i = 0; i < n_sprites; i++) {
+                    const tile_addr = ((this.state.control & PpuControlFlags.SPRITE_TILE_SELECT) << 9)
+                            // +1 = tile id
+                        | (this.state.secondary_oam[i * 4 + 1] << 4) 
+                        | (this.state.scanline - this.state.secondary_oam[i * 4]);
+                    this.state.sprite_tile_lo_shift_regs[i] = this.bus.read(tile_addr);
+                    this.state.sprite_tile_hi_shift_regs[i] = this.bus.read(tile_addr + 8);
+                }
+            }
+            //#endregion
+
+            //#region Address increments
+            if (this.state.pixel_cycle == 256) {
+                this.inc_fine_y();
+            }
+            if (this.state.pixel_cycle == 257) {
+                this.transfer_x_addr();
             }
             // this is the pre-render scanline, it has some special handling
             if (this.state.scanline === 261) {
@@ -118,6 +158,7 @@ export class Ppu2C02 {
                     this.transfer_y_addr();
                 }
             }
+            //#endregion
         }
         // check if we need to set the vblank flag
         let nmi_enabled = (this.state.control & PpuControlFlags.VBLANK_NMI_ENABLE) > 0;
@@ -130,9 +171,10 @@ export class Ppu2C02 {
             // interestingly enough, pixel output doesn't begin until cycle _4_.
             // this comes from NESDEV:
             // https://wiki.nesdev.com/w/index.php/NTSC_video
+            //#region Background rendering
             let bg_pixel = 0x00;
             let bg_palette = 0x00;
-            // render the background
+
             if ((this.state.mask & PpuMaskFlags.BG_ENABLE) > 0) {
                 let bit_mux = 0x8000 >> this.state.x;
                 let pattern_hi = (this.state.bg_tile_hi_shift_reg & bit_mux) > 0 ? 1 : 0;
@@ -142,11 +184,64 @@ export class Ppu2C02 {
                 let palette_lo = (this.state.bg_attr_lo_shift_reg & bit_mux) > 0 ? 1 : 0;
                 bg_palette = (palette_hi << 1) | palette_lo;
             }
-            const bg_color = this.bus.read(PPU_PALETTE_START_ADDR | (bg_palette << 2) | bg_pixel);
+            //#endregion
+
+            //#region Sprite rendering
+            let sprite_pixel = 0x00;
+            let sprite_palette = 0x00;
+            let sprite_priority = false;
+            let is_sprite0_rendered = false;
+
+            if ((this.state.mask & PpuMaskFlags.SPRITE_ENABLE) > 0) {
+                for (let i = 0; i < 8; i++) {
+                    // this sprite is active, use the shifters
+                    if (this.state.secondary_oam[i * 4 + PpuOamByteOffsets.X_POS] == 0) {
+                        if (i == 0) {
+                            is_sprite0_rendered = true;
+                        }
+                        const pattern_hi = +!!(this.state.sprite_tile_hi_shift_regs[i] & 0x80);
+                        const pattern_lo = +!!(this.state.sprite_tile_lo_shift_regs[i] & 0x80);
+                        sprite_pixel = (pattern_hi << 1) | pattern_lo;
+                        const attr = this.state.secondary_oam[i * 4 + PpuOamByteOffsets.ATTR];
+                        // add 0x04 since the sprites use the last 4 palettes
+                        sprite_palette = (attr & PpuOamAttributes.PALLETE) + 0x04;
+                        sprite_priority = !!(attr & PpuOamAttributes.BACKGROUND_PRIORITY);
+                        if (sprite_pixel != 0) {
+                            // we're done, a non-transparent sprite pixel has been selected
+                            break;
+                        }
+                    }
+
+                }
+            }
+            //#endregion
+
+            //#region Compositing
+            let pixel = bg_pixel;
+            let palette = bg_palette;
+            if (bg_pixel == 0) {
+                // use the sprite
+                pixel = sprite_pixel;
+                palette = sprite_palette;
+            } else if (sprite_pixel !== 0) {
+                // we need to sort out priority
+                if (!!sprite_priority) {
+                    pixel = sprite_pixel;
+                    palette = sprite_palette;
+                }
+                // then test for sprite0 hits
+                if (is_sprite0_rendered) {
+                    if (!!(this.state.mask & PpuMaskFlags.BG_ENABLE) && !!(this.state.mask & PpuMaskFlags.SPRITE_ENABLE)) {
+                        this.state.status |= PpuStatusFlags.SPRITE_0_HIT;
+                    }
+                }
+            }
+            const color = this.bus.read(PPU_PALETTE_START_ADDR | (palette << 2) | pixel);
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
-                this.state.frame_data[idx * 3 + i] = PALLETE_TABLE[bg_color * 3 + i];
+                this.state.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
             }
+            //#endregion
         } else if (this.state.pixel_cycle < 4) {
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
@@ -398,17 +493,26 @@ export class Ppu2C02 {
     }
 
     private update_shift_regs() {
-        if ((this.state.mask & PpuMaskFlags.BG_ENABLE) === 0) {
-            return;
+        if (!!(this.state.mask & PpuMaskFlags.BG_ENABLE)) {
+            this.state.bg_tile_hi_shift_reg <<= 1;
+            this.state.bg_tile_hi_shift_reg &= 0xFFFF;
+            this.state.bg_tile_lo_shift_reg <<= 1;
+            this.state.bg_tile_lo_shift_reg &= 0xFFFF;
+            this.state.bg_attr_lo_shift_reg <<= 1;
+            this.state.bg_attr_lo_shift_reg &= 0xFFFF;
+            this.state.bg_attr_hi_shift_reg <<= 1;
+            this.state.bg_attr_hi_shift_reg &= 0xFFFF;
         }
-        this.state.bg_tile_hi_shift_reg <<= 1;
-        this.state.bg_tile_hi_shift_reg &= 0xFFFF;
-        this.state.bg_tile_lo_shift_reg <<= 1;
-        this.state.bg_tile_lo_shift_reg &= 0xFFFF;
-        this.state.bg_attr_lo_shift_reg <<= 1;
-        this.state.bg_attr_lo_shift_reg &= 0xFFFF;
-        this.state.bg_attr_hi_shift_reg <<= 1;
-        this.state.bg_attr_hi_shift_reg &= 0xFFFF;
+        if (!!(this.state.mask & PpuMaskFlags.SPRITE_ENABLE) && this.state.pixel_cycle >= 1 && this.state.pixel_cycle < 258) {
+            for (let i = 0; i < 8; i++) {
+                if (this.state.secondary_oam[i * 4 + PpuOamByteOffsets.X_POS] > 0) {
+                    this.state.secondary_oam[i * 4 + PpuOamByteOffsets.X_POS]--;
+                } else {
+                    this.state.sprite_tile_hi_shift_regs[i] <<= 1;
+                    this.state.sprite_tile_lo_shift_regs[i] <<= 1;
+                }
+            }
+        }
     }
 
     private transfer_x_addr() {

@@ -314,10 +314,8 @@ export interface IPpuState {
     /** The 2-bit attribute for the next tile to render, which feeds the shift registers */
     bg_attr_latch: 0 | 1 | 2 | 3;
     // The 8 tile shift registers for the 8 sprites
-    sprite_tile_hi_shift_regs: Uint16Array,
-    sprite_tile_lo_shift_regs: Uint16Array,
-    sprite_attributes: Uint8Array,
-    sprite_positions: Uint8Array,
+    sprite_tile_hi_shift_regs: Uint8Array,
+    sprite_tile_lo_shift_regs: Uint8Array,
     //#endregion
 
     //#region Byte buffers
@@ -346,6 +344,9 @@ export interface IPpuState {
     //#region Emulation helpers
     /** The OAM address byte */
     oam_addr: u8;
+    /** The secondary OAM address, used for sprite evaluation */
+    secondary_oam_addr: u8;
+    /** The  */
     /** The internal OAM memory */
     oam: Uint8Array;
     /** The secondary OAM used for sprite evaluation */
@@ -387,15 +388,14 @@ export const PPU_POWERON_STATE: Readonly<IPpuState> = Object.freeze({
     x: 0,
     w: false,
     oam_addr: 0,
+    secondary_oam_addr: 0,
     bg_tile_hi_shift_reg: 0,
     bg_tile_lo_shift_reg: 0,
     bg_attr_hi_shift_reg: 0,
     bg_attr_lo_shift_reg: 0,
     bg_attr_latch: 0,
-    sprite_tile_hi_shift_regs: new Uint16Array(8),
-    sprite_tile_lo_shift_regs: new Uint16Array(8),
-    sprite_attributes: new Uint8Array(8),
-    sprite_positions: new Uint8Array(8),
+    sprite_tile_hi_shift_regs: new Uint8Array(8),
+    sprite_tile_lo_shift_regs: new Uint8Array(8),
     ppudata_buffer: 0,
     temp_nt_byte: 0,
     temp_bg_hi_byte: 0,
@@ -492,6 +492,21 @@ export const enum PpuControlPorts {
     PPUDATA = 0x2007,
     /// Address for setting up OAM
     OAMDMA = 0x4014,
+}
+
+export const enum PpuOamAttributes {
+    PALLETE = 0x03,
+    UNUSED = 0x1C,
+    BACKGROUND_PRIORITY = 0x20,
+    FLIP_HORI = 0x40,
+    FLIP_VERT = 0x80
+}
+
+export const enum PpuOamByteOffsets {
+    Y_POS = 0,
+    TILE = 1,
+    ATTR = 2,
+    X_POS = 3
 }
 
 /// Palette table taken from NesDev
