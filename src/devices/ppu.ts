@@ -497,14 +497,10 @@ export class Ppu2C02 {
 
     private update_shift_regs() {
         if (!!(this.state.mask & PpuMaskFlags.BG_ENABLE)) {
-            this.state.bg_tile_hi_shift_reg <<= 1;
-            this.state.bg_tile_hi_shift_reg &= 0xFFFF;
-            this.state.bg_tile_lo_shift_reg <<= 1;
-            this.state.bg_tile_lo_shift_reg &= 0xFFFF;
-            this.state.bg_attr_lo_shift_reg <<= 1;
-            this.state.bg_attr_lo_shift_reg &= 0xFFFF;
-            this.state.bg_attr_hi_shift_reg <<= 1;
-            this.state.bg_attr_hi_shift_reg &= 0xFFFF;
+            this.state.bg_tile_hi_shift_reg = 0xFFFF & this.state.bg_tile_hi_shift_reg << 1;
+            this.state.bg_tile_lo_shift_reg = 0xFFFF & this.state.bg_tile_lo_shift_reg << 1;
+            this.state.bg_attr_lo_shift_reg = 0xFFFF & this.state.bg_attr_lo_shift_reg << 1;
+            this.state.bg_attr_hi_shift_reg = 0xFFFF & this.state.bg_attr_hi_shift_reg << 1;
         }
         if (!!(this.state.mask & PpuMaskFlags.SPRITE_ENABLE) && this.state.pixel_cycle >= 1 && this.state.pixel_cycle < 258) {
             for (let i = 0; i < 8; i++) {
