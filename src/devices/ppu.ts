@@ -219,24 +219,26 @@ export class Ppu2C02 {
             //#region Compositing
             let pixel = bg_pixel;
             let palette = bg_palette;
-            if (bg_pixel == 0) {
-                // use the sprite
-                pixel = sprite_pixel;
-                palette = sprite_palette;
-            } else if (sprite_pixel !== 0) {
-                // we need to sort out priority
-                if (!!sprite_priority) {
+            if (sprite_pixel !== 0) {
+                if (bg_pixel == 0) {
+                    // use the sprite
                     pixel = sprite_pixel;
                     palette = sprite_palette;
-                }
-                // then test for sprite0 hits
-                if (is_sprite0_rendered) {
-                    if (!!(this.state.mask & PpuMaskFlags.BG_ENABLE) && !!(this.state.mask & PpuMaskFlags.SPRITE_ENABLE)) {
-                        this.state.status |= PpuStatusFlags.SPRITE_0_HIT;
+                } else {
+                    // we need to sort out priority
+                    if (!sprite_priority) {
+                        pixel = sprite_pixel;
+                        palette = sprite_palette;
+                    }
+                    // then test for sprite0 hits
+                    if (is_sprite0_rendered) {
+                        if (!!(this.state.mask & PpuMaskFlags.BG_ENABLE) && !!(this.state.mask & PpuMaskFlags.SPRITE_ENABLE)) {
+                            this.state.status |= PpuStatusFlags.SPRITE_0_HIT;
+                        }
                     }
                 }
             }
-            const color = this.bus.read(PPU_PALETTE_START_ADDR | (palette << 2) | pixel);
+            const color = this.bus.read(PPU_PALETTE_START_ADDR | (pixel === 0x00 ? 0 : (palette << 2) | pixel));
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
             for (let i = 0; i < 3; i++) {
                 this.state.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
@@ -244,10 +246,11 @@ export class Ppu2C02 {
             //#endregion
         } else if (this.state.pixel_cycle < 4) {
             const idx = this.state.scanline * 256 + this.state.pixel_cycle;
+            const color = this.bus.read(PPU_PALETTE_START_ADDR);
             for (let i = 0; i < 3; i++) {
                 // fill with black for now
                 // technically this should actually be the background color
-                this.state.frame_data[idx * 3 + i] = 0;
+                this.state.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
             }
         }
         this.state.pixel_cycle++;
