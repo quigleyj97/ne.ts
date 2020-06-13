@@ -14,6 +14,15 @@ export interface IBusDevice {
     write(addr: u16, data: u8): void;
 }
 
+export class DummyBusDevice {
+    read() {
+        return 0;
+    }
+    write() {
+        return void 0;
+    }
+}
+
 export class Ram implements IBusDevice {
     private buffer: Uint8Array;
 

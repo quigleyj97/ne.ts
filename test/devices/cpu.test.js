@@ -1,5 +1,5 @@
 import chai from "chai";
-import { Bus, Cpu6502, POWERON_CPU_STATE, Instruction, AddressingMode } from "../../lib/index.js";
+import { Bus, Cpu6502, POWERON_CPU_STATE, Instruction, AddressingMode, DummyBusDevice } from "../../lib/index.js";
 
 const expect = chai.expect;
 
@@ -12,10 +12,7 @@ describe("Cpu", () => {
     beforeEach(() => {
         bus = new Bus();
         bus.map_device({
-            dev: {
-                read: () => 0,
-                write: () => void 0
-            },
+            dev: new DummyBusDevice(),
             start: 0x0000,
             end: 0xFFFF,
             mirror: 0xFFFF
