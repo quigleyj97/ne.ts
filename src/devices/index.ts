@@ -5,3 +5,4 @@ export * from "./nes.js";
 export * from "./ppu.js";
 export * from "./controller.js";
 export * from "./dma.js";
+export * from "./apu.js";
