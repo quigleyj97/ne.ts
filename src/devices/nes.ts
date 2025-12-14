@@ -18,6 +18,7 @@ export class NesEmulator {
     private cycles = 0;
     private is_cpu_idle = false;
     private is_frame_ready = false;
+    private cpu_cycle_counter = 0;
 
     constructor(cart: ICartridge) {
         const cpuBus = new Bus();
@@ -99,7 +100,9 @@ export class NesEmulator {
             this.cpu.trigger_nmi();
             this.ppu.ack_vblank();
         }
-        if (this.cycles % 3 === 0) {
+        this.cpu_cycle_counter++;
+        if (this.cpu_cycle_counter === 3) {
+            this.cpu_cycle_counter = 0;
             this.controller_dma.tick();
             this.oam_dma.tick();
             if (this.is_cpu_idle && !this.oam_dma.is_dma_active) {

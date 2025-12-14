@@ -1,5 +1,5 @@
 import chai from "chai";
-import { deep_copy } from "../../lib/index.js";
+import { deep_copy, reverseBits } from "../../lib/index.js";
 const expect = chai.expect;
 
 describe("Object cloning", () => {
@@ -38,5 +38,60 @@ describe("Object cloning", () => {
         expect(copy).to.deep.equal(new Uint8Array([0xCA, 0xFE, 0xBA, 0xBE]));
         test_arr[0] = 0xA5;
         expect(copy[0]).to.equal(0xCA);
+    });
+});
+
+describe("Bit reversal", () => {
+    it("should reverse bits correctly for 0x00", () => {
+        expect(reverseBits(0x00)).to.equal(0x00);
+    });
+
+    it("should reverse bits correctly for 0xFF", () => {
+        expect(reverseBits(0xFF)).to.equal(0xFF);
+    });
+
+    it("should reverse bits correctly for 0x01", () => {
+        // 00000001 -> 10000000
+        expect(reverseBits(0x01)).to.equal(0x80);
+    });
+
+    it("should reverse bits correctly for 0x80", () => {
+        // 10000000 -> 00000001
+        expect(reverseBits(0x80)).to.equal(0x01);
+    });
+
+    it("should reverse bits correctly for 0xF0", () => {
+        // 11110000 -> 00001111
+        expect(reverseBits(0xF0)).to.equal(0x0F);
+    });
+
+    it("should reverse bits correctly for 0x0F", () => {
+        // 00001111 -> 11110000
+        expect(reverseBits(0x0F)).to.equal(0xF0);
+    });
+
+    it("should reverse bits correctly for 0xAA", () => {
+        // 10101010 -> 01010101
+        expect(reverseBits(0xAA)).to.equal(0x55);
+    });
+
+    it("should reverse bits correctly for 0x55", () => {
+        // 01010101 -> 10101010
+        expect(reverseBits(0x55)).to.equal(0xAA);
+    });
+
+    it("should reverse bits correctly for a sprite pattern 0xC3", () => {
+        // 11000011 -> 11000011 (palindrome)
+        expect(reverseBits(0xC3)).to.equal(0xC3);
+    });
+
+    it("should reverse bits correctly for a sprite pattern 0x18", () => {
+        // 00011000 -> 00011000 (palindrome)
+        expect(reverseBits(0x18)).to.equal(0x18);
+    });
+
+    it("should reverse bits correctly for a sprite pattern 0x3C", () => {
+        // 00111100 -> 00111100 (palindrome)
+        expect(reverseBits(0x3C)).to.equal(0x3C);
     });
 });

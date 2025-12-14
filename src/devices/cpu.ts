@@ -745,7 +745,7 @@ export class Cpu6502 {
     /** Returns false if no interrupt will be handled on the next execution, true otherwise */
     private run_interrupt(): boolean {
         if (!this.interrupt_pending) return false;
-        console.log(" [INFO] CPU Interrupt:", this.maskable_interrupt ? "IRQ" : "NMI");
+        // console.log(" [INFO] CPU Interrupt:", this.maskable_interrupt ? "IRQ" : "NMI");
         this.interrupt_pending = false;
         this.push_stack((this.state.pc & 0xFF00) >> 8);
         this.push_stack((this.state.pc & 0xFF));

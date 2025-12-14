@@ -1,4 +1,4 @@
-import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy, PpuOamByteOffsets, PpuOamAttributes } from "../utils/index.js";
+import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy, PpuOamByteOffsets, PpuOamAttributes, reverseBits } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -148,7 +148,7 @@ export class Ppu2C02 {
             if ((this.pixel_cycle >= 1 && this.pixel_cycle < 258) || (this.pixel_cycle > 320 && this.pixel_cycle < 337)) {
                 this.update_shift_regs();
                 const CHR_BANK = (this.control & PpuControlFlags.BG_TILE_SELECT) << 8;
-                switch ((this.pixel_cycle - 1) % 8) {
+                switch ((this.pixel_cycle - 1) & 7) {
                     case 0:
                         this.transfer_registers();
                         this.temp_nt_byte = this.bus.read(PPU_NAMETABLE_START_ADDR | (this.v & 0x0FFF));
@@ -226,12 +226,32 @@ export class Ppu2C02 {
                 }
                 // prepare the shifters for rendering
                 for (let i = 0; i < n_sprites; i++) {
+                    const attr = this.secondary_oam[i * 4 + PpuOamByteOffsets.ATTR];
+                    const flipH = !!(attr & PpuOamAttributes.FLIP_HORI);
+                    const flipV = !!(attr & PpuOamAttributes.FLIP_VERT);
+                    
+                    // Check if using 8x16 sprites
+                    const sprite8x16 = !!(this.control & PpuControlFlags.SPRITE_MODE_SELECT);
+                    const spriteHeight = sprite8x16 ? 16 : 8;
+                    
+                    let row = this.scanline - this.secondary_oam[i * 4];
+                    if (flipV) row = (spriteHeight - 1) - row;  // Invert row for vertical flip
+                    
                     const tile_addr = ((this.control & PpuControlFlags.SPRITE_TILE_SELECT) << 9)
                             // +1 = tile id
-                        | (this.secondary_oam[i * 4 + 1] << 4) 
-                        | (this.scanline - this.secondary_oam[i * 4]);
-                    this.sprite_tile_lo_shift_regs[i] = this.bus.read(tile_addr);
-                    this.sprite_tile_hi_shift_regs[i] = this.bus.read(tile_addr + 8);
+                        | (this.secondary_oam[i * 4 + PpuOamByteOffsets.TILE] << 4)
+                        | row;
+                    
+                    let lo = this.bus.read(tile_addr);
+                    let hi = this.bus.read(tile_addr + 8);
+                    
+                    if (flipH) {
+                        lo = reverseBits(lo);
+                        hi = reverseBits(hi);
+                    }
+                    
+                    this.sprite_tile_lo_shift_regs[i] = lo;
+                    this.sprite_tile_hi_shift_regs[i] = hi;
                 }
             }
             //#endregion
@@ -333,10 +353,11 @@ export class Ppu2C02 {
                 }
             }
             const color = this.bus.read(PPU_PALETTE_START_ADDR | (pixel === 0x00 ? 0 : (palette << 2) | pixel));
-            const idx = this.scanline * 256 + this.pixel_cycle;
-            for (let i = 0; i < 3; i++) {
-                this.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
-            }
+            const idx = (this.scanline * 256 + this.pixel_cycle) * 3;
+            const pal_idx = color * 3;
+            this.frame_data[idx] = PALLETE_TABLE[pal_idx];
+            this.frame_data[idx + 1] = PALLETE_TABLE[pal_idx + 1];
+            this.frame_data[idx + 2] = PALLETE_TABLE[pal_idx + 2];
             //#endregion
         } else if (this.pixel_cycle < 4) {
             const idx = this.scanline * 256 + this.pixel_cycle;

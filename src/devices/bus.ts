@@ -35,18 +35,24 @@ export class Bus {
     ///
     /// This is memorized to emulate electrical effects of open bus conditions.
     private last_bus_val: u8 = 0;
+    /// Lookup table for fast O(1) address resolution.
+    ///
+    /// Since NES address space is 16-bit (65536 addresses), we can pre-calculate
+    /// a mapping array where lookup[address] points directly to the device.
+    private lookup: (IMemoryMappedDevice | undefined)[] = new Array(65536);
 
     /** Add a device to the bus */
     public map_device(dev: IMemoryMappedDevice) {
         this.devices.push(dev);
+        for (let i = dev.start; i <= dev.end; i++) {
+            this.lookup[i] = dev;
+        }
     }
 
     /** Read from the address bus */
     public read(addr: u16) {
-        for (const map of this.devices) {
-            if (addr < map.start || addr > map.end) {
-                continue;
-            }
+        const map = this.lookup[addr];
+        if (map) {
             const mapped_addr = (addr - map.start) & map.mask;
             const val = 0xFF & map.dev.read(mapped_addr);
             this.last_bus_val = val;
@@ -58,14 +64,10 @@ export class Bus {
     /** Write a value to the address bus */
     public write(addr: u16, data: u8) {
         this.last_bus_val = data;
-
-        for (const map of this.devices) {
-            if (addr < map.start || addr > map.end) {
-                continue;
-            }
+        const map = this.lookup[addr];
+        if (map) {
             const mapped_addr = (addr - map.start) & map.mask;
             map.dev.write(mapped_addr, 0xFF & data);
-            return;
         }
     }
 }
