@@ -40,19 +40,22 @@ The APU SHALL define constants for all register addresses to improve code clarit
 
 ### Requirement: APU Clock Integration
 
-The APU SHALL be clocked by the emulator once per CPU cycle to maintain accurate timing.
+The APU SHALL be clocked by the emulator once per CPU cycle to maintain frame-accurate timing. The APU can be "frame-accurate" rather than strictly cycle-accurate - it can track cycles loosely and generate the correct number of samples per frame.
 
 #### Scenario: APU clocked every CPU cycle
 
 - **WHEN** the [`NesEmulator.tick()`](../../../../../src/devices/nes.ts) method executes a CPU cycle
 - **THEN** the APU `clock()` method SHALL be called once
-- **AND** the APU SHALL advance its internal state by one CPU cycle
+- **AND** the APU SHALL advance its internal state appropriately (following PPU pattern from [`src/devices/ppu.ts`](../../../../../src/devices/ppu.ts))
 
 #### Scenario: APU timing synchronization
 
 - **WHEN** the emulator runs for 29780 CPU cycles (one NTSC frame)
-- **THEN** the APU SHALL generate exactly 14890 APU samples (CPU rate / 2)
-- **AND** timing SHALL remain synchronized with CPU and PPU
+- **THEN** the APU SHALL generate the correct number of audio samples for that frame
+- **AND** timing SHALL remain synchronized with CPU and PPU at frame boundaries
+- **AND** the APU MAY batch internal operations as long as audio output is sample-accurate
+
+**Design Trade-off**: The APU prioritizes sample-accurate audio generation at frame boundaries over strict cycle-by-cycle accuracy. Internal cycles can be tracked loosely and batched for performance, as long as the correct samples are generated per frame. This is documented as an acceptable trade-off for audio quality vs. implementation complexity.
 
 ### Requirement: Status Register $4015 Read
 

@@ -22,24 +22,24 @@ This change implements a complete, cycle-accurate NES 2A03 APU with the followin
 - Create AudioWorklet-based audio output pipeline
 - Implement non-linear mixing using authentic NES DAC formulas
 
-**Audio Channels:**
+**Audio Channels** (per [NESDev APU specifications](https://www.nesdev.org/wiki/APU)):
 - **Pulse Channels (2)**: Square wave generators with duty cycle, envelope, sweep, length counter
 - **Triangle Channel**: Triangle wave with linear counter and length counter
 - **Noise Channel**: Pseudo-random noise using 15-bit LFSR
 - **DMC Channel**: Delta modulation sample playback with CPU DMA
 
-**Supporting Units:**
+**Supporting Units** (justified by [NESDev Frame Counter documentation](https://www.nesdev.org/wiki/APU_Frame_Counter) - the NES APU requires precise timing control to maintain authentic audio output; the frame counter provides hardware-accurate clocking of envelope generators, sweep units, and length counters):
 - **Frame Counter**: Clocks envelopes, sweeps, and length counters at 240 Hz (4-step) or 192 Hz (5-step)
 - **Envelope Unit**: Volume control with attack/decay
 - **Sweep Unit**: Automatic pitch adjustment for pulse channels
 - **Length Counter**: Automatic note duration control
 
 **Audio Output:**
-- Sample-based generation at APU native rate (~894 kHz)
+- Sample-based generation at APU native rate (~894 kHz for NTSC, per [NESDev APU timing](https://www.nesdev.org/wiki/APU#Frame_Counter))
 - Non-linear mixing per NES hardware specifications
-- AudioWorklet processor for low-latency real-time output
+- AudioWorklet processor for low-latency real-time output (Chrome 140+, Firefox 140+, Safari 26+)
 - Dynamic rate control to prevent buffer underrun/overrun
-- ScriptProcessorNode fallback for older browsers
+- No fallback implementation - AudioWorklet required
 
 **Testing Strategy:**
 - Unit tests for each channel and component
@@ -78,12 +78,12 @@ This change implements a complete, cycle-accurate NES 2A03 APU with the followin
 - Audio latency target: <50ms
 
 **Browser Requirements:**
-- AudioWorklet support (Chrome 66+, Firefox 76+, Safari 14.1+)
-- Fallback to ScriptProcessorNode for older browsers
+- AudioWorklet support required (Chrome 140+, Firefox 140+, Safari 26+)
 - Web Audio API required (no Node.js headless support without polyfill)
+- No audio if browser lacks AudioWorklet support (acceptable tradeoff)
 
 **Test Resources:**
-- Blargg's APU test suite: https://github.com/christopherpow/nes-test-roms
+- blargg's APU test suite: http://slack.net/~ant/nes-tests/ (public domain, available at https://github.com/christopherpow/nes-test-roms)
 - bbbradsmith's audio tests: https://github.com/bbbradsmith/nes-audio-tests
 - NESDev APU reference: https://www.nesdev.org/wiki/APU
 

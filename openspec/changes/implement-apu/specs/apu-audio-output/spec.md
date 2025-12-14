@@ -1,5 +1,10 @@
 # APU Audio Output Specification
 
+**Note**: Sample rates, frequencies, and other magic numbers in this specification are sourced from:
+- [NESDev APU documentation](https://www.nesdev.org/wiki/APU) - timing and frequency specifications
+- [NESDev APU Mixer](https://www.nesdev.org/wiki/APU_Mixer) - mixing formulas and DAC characteristics
+- All values are for **NTSC** systems unless otherwise specified (PAL has different timing)
+
 ## ADDED Requirements
 
 ### Requirement: Non-Linear Channel Mixing
@@ -29,13 +34,13 @@ The APU SHALL mix channel outputs using non-linear formulas matching NES hardwar
 
 ### Requirement: Sample Generation Rate
 
-The APU SHALL generate audio samples at the native APU rate of approximately 894 kHz (CPU clock / 2).
+The APU SHALL generate audio samples at the native APU rate of approximately 894 kHz (CPU clock / 2) for **NTSC** systems (source: [NESDev APU timing](https://www.nesdev.org/wiki/APU#Glossary)).
 
 #### Scenario: Sample generation timing
 
 - **WHEN** the APU is clocked by the emulator
 - **THEN** it SHALL generate one sample every 2 CPU cycles
-- **AND** for NTSC at 1.789773 MHz CPU clock, sample rate SHALL be 894886.5 Hz
+- **AND** for NTSC at 1.789773 MHz CPU clock (source: [NESDev CPU](https://www.nesdev.org/wiki/CPU)), sample rate SHALL be 894886.5 Hz
 
 #### Scenario: Sample buffering
 
@@ -45,7 +50,7 @@ The APU SHALL generate audio samples at the native APU rate of approximately 894
 
 ### Requirement: AudioWorklet Output Pipeline
 
-The APU SHALL use AudioWorklet for low-latency audio output in modern browsers.
+The APU SHALL use AudioWorklet exclusively for low-latency audio output. Browsers without AudioWorklet support will not have audio output.
 
 #### Scenario: AudioWorklet processor creation
 
@@ -65,22 +70,6 @@ The APU SHALL use AudioWorklet for low-latency audio output in modern browsers.
 - **THEN** it SHALL fill the output buffer with resampled audio samples
 - **AND** it SHALL request more samples if buffer level is low
 
-### Requirement: ScriptProcessorNode Fallback
-
-The APU SHALL provide ScriptProcessorNode fallback for browsers without AudioWorklet support.
-
-#### Scenario: Fallback detection
-
-- **WHEN** AudioWorklet is not available in the browser
-- **THEN** the APU SHALL use ScriptProcessorNode instead
-- **AND** a warning SHALL be logged to console
-
-#### Scenario: ScriptProcessor operation
-
-- **WHEN** ScriptProcessorNode is used
-- **THEN** audio processing SHALL occur on main thread via onaudioprocess callback
-- **AND** functionality SHALL be equivalent to AudioWorklet but with higher latency
-
 ### Requirement: Sample Rate Conversion
 
 The APU SHALL resample from native APU rate (~894 kHz) to audio output rate (typically 44.1 kHz or 48 kHz).
@@ -95,8 +84,8 @@ The APU SHALL resample from native APU rate (~894 kHz) to audio output rate (typ
 #### Scenario: Resampler input/output rates
 
 - **WHEN** resampler is initialized
-- **THEN** input rate SHALL be configurable (default ~894 kHz)
-- **AND** output rate SHALL match AudioContext sample rate (typically 44.1 kHz or 48 kHz)
+- **THEN** input rate SHALL be configurable (default ~894 kHz for NTSC)
+- **AND** output rate SHALL use Web Audio API standard default of 48 kHz (rationale: [MDN AudioContext.sampleRate](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext/sampleRate) - 48 kHz is the most common default and provides good quality/performance balance)
 - **AND** ratio SHALL be calculated as output_rate / input_rate
 
 ### Requirement: Dynamic Rate Control
@@ -125,7 +114,7 @@ The APU SHALL implement dynamic rate control to prevent audio buffer underrun/ov
 
 ### Requirement: Audio Output Control
 
-The APU SHALL provide controls for audio enabling and volume.
+The APU SHALL provide basic audio enabling control. Volume and mute control SHALL be handled by system controls.
 
 #### Scenario: Audio enable/disable
 
@@ -134,12 +123,7 @@ The APU SHALL provide controls for audio enabling and volume.
 - **AND** output SHALL be muted via GainNode or disconnection
 - **AND** AudioContext MAY be suspended for performance
 
-#### Scenario: Volume control
-
-- **WHEN** volume is adjusted
-- **THEN** a GainNode SHALL apply the volume multiplier
-- **AND** volume range SHALL be 0.0 (silence) to 1.0 (full volume)
-- **AND** volume changes SHALL be smoothed to prevent clicks
+**Note**: Custom volume/mute controls are removed from scope. Users should rely on browser/system volume controls.
 
 ### Requirement: AudioContext Lifecycle
 
@@ -157,6 +141,8 @@ The APU SHALL manage AudioContext lifecycle including user gesture requirements.
 - **THEN** audio output SHALL begin
 - **AND** any queued samples SHALL start playing
 
+**Note**: Tab mute detection/handling is removed from scope. Let browser handle muting naturally based on tab visibility.
+
 ### Requirement: Audio Latency
 
 The APU SHALL target low audio latency for responsive gameplay.
@@ -164,8 +150,8 @@ The APU SHALL target low audio latency for responsive gameplay.
 #### Scenario: Latency target
 
 - **WHEN** audio pipeline is configured
-- **THEN** total latency (generation → output) SHALL target < 50ms
-- **AND** acceptable latency SHALL be < 100ms
+- **THEN** total latency (generation → output) SHOULD target < 50ms as a qualitative goal
+- **AND** acceptable latency SHOULD be < 100ms
 - **AND** latency SHALL be tunable via buffer size configuration
 
 #### Scenario: Buffer size configuration
@@ -173,46 +159,52 @@ The APU SHALL target low audio latency for responsive gameplay.
 - **WHEN** audio buffer size is set
 - **THEN** smaller buffers SHALL reduce latency but increase CPU usage
 - **AND** larger buffers SHALL increase latency but improve stability
-- **AND** default buffer size SHALL balance latency and stability (typically 20-30ms)
+- **AND** default buffer size SHALL be tuned empirically for optimal latency/stability balance (typically 20-30ms, adjusted based on testing)
+
+**Note**: Latency goals are qualitative - subjective verification via listening is acceptable. No quantifiable metrics required initially.
 
 ### Requirement: Browser Compatibility
 
-The APU SHALL support audio output across modern browsers with graceful feature detection.
+The APU SHALL require AudioWorklet support. No audio will be available in browsers lacking this feature.
 
 #### Scenario: Chrome AudioWorklet support
 
-- **WHEN** running in Chrome 66 or later
+- **WHEN** running in Chrome 140 or later
 - **THEN** AudioWorklet SHALL be used for audio output
 - **AND** latency SHALL be optimal
 
 #### Scenario: Firefox AudioWorklet support
 
-- **WHEN** running in Firefox 76 or later
+- **WHEN** running in Firefox 140 or later
 - **THEN** AudioWorklet SHALL be used for audio output
 
 #### Scenario: Safari AudioWorklet support
 
-- **WHEN** running in Safari 14.1 or later
+- **WHEN** running in Safari 26 or later
 - **THEN** AudioWorklet SHALL be used for audio output
 
-#### Scenario: Legacy browser support
+#### Scenario: Unsupported browser
 
 - **WHEN** running in browsers without AudioWorklet support
-- **THEN** ScriptProcessorNode fallback SHALL be used
-- **AND** degraded performance warning MAY be shown
+- **THEN** no audio output SHALL be available
+- **AND** a warning SHALL be logged to console
+- **AND** emulation SHALL continue without audio
 
 ### Requirement: Audio Output Performance
 
-The APU SHALL maintain 60 FPS emulation speed while generating and outputting audio.
+The APU SHALL maintain 60 FPS minimum emulation speed while generating and outputting audio.
 
-#### Scenario: CPU usage target
+#### Scenario: Frame rate target
 
 - **WHEN** audio is enabled during emulation
-- **THEN** APU processing SHALL NOT cause frame rate to drop below 60 FPS
+- **THEN** APU processing SHOULD NOT cause frame rate to drop below 60 FPS as a qualitative goal
 - **AND** sample generation and mixing SHALL be optimized for performance
+- **AND** no specific CPU overhead limit is defined - just avoid regressing existing performance
 
-#### Scenario: Performance monitoring
+#### Scenario: Performance optimization
 
 - **WHEN** audio performance is measured
 - **THEN** mixing and resampling SHALL complete within available time budget
-- **AND** if performance is insufficient, consider typed arrays, lookup tables, or WebAssembly
+- **AND** if performance is insufficient, consider typed arrays and lookup tables for optimization
+
+**Note**: Audio quality verification is subjective - listening tests are acceptable. No quantifiable metrics required initially.
