@@ -1,4 +1,4 @@
-import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy, PpuOamByteOffsets, PpuOamAttributes } from "../utils/index.js";
+import { u16, u8, PpuControlFlags, PpuStatusFlags, PpuControlPorts, IBusDevice, PALLETE_TABLE, IPpuState, PPU_POWERON_STATE, PpuAddressPart, PpuMaskFlags, deep_copy, PpuOamByteOffsets, PpuOamAttributes, reverseBits } from "../utils/index.js";
 import { Bus } from "./bus.js";
 
 const PPU_NAMETABLE_START_ADDR: u16 = 0x2000;
@@ -226,12 +226,32 @@ export class Ppu2C02 {
                 }
                 // prepare the shifters for rendering
                 for (let i = 0; i < n_sprites; i++) {
+                    const attr = this.secondary_oam[i * 4 + PpuOamByteOffsets.ATTR];
+                    const flipH = !!(attr & PpuOamAttributes.FLIP_HORI);
+                    const flipV = !!(attr & PpuOamAttributes.FLIP_VERT);
+                    
+                    // Check if using 8x16 sprites
+                    const sprite8x16 = !!(this.control & PpuControlFlags.SPRITE_MODE_SELECT);
+                    const spriteHeight = sprite8x16 ? 16 : 8;
+                    
+                    let row = this.scanline - this.secondary_oam[i * 4];
+                    if (flipV) row = (spriteHeight - 1) - row;  // Invert row for vertical flip
+                    
                     const tile_addr = ((this.control & PpuControlFlags.SPRITE_TILE_SELECT) << 9)
                             // +1 = tile id
-                        | (this.secondary_oam[i * 4 + 1] << 4) 
-                        | (this.scanline - this.secondary_oam[i * 4]);
-                    this.sprite_tile_lo_shift_regs[i] = this.bus.read(tile_addr);
-                    this.sprite_tile_hi_shift_regs[i] = this.bus.read(tile_addr + 8);
+                        | (this.secondary_oam[i * 4 + PpuOamByteOffsets.TILE] << 4)
+                        | row;
+                    
+                    let lo = this.bus.read(tile_addr);
+                    let hi = this.bus.read(tile_addr + 8);
+                    
+                    if (flipH) {
+                        lo = reverseBits(lo);
+                        hi = reverseBits(hi);
+                    }
+                    
+                    this.sprite_tile_lo_shift_regs[i] = lo;
+                    this.sprite_tile_hi_shift_regs[i] = hi;
                 }
             }
             //#endregion
