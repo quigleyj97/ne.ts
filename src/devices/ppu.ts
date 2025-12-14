@@ -148,7 +148,7 @@ export class Ppu2C02 {
             if ((this.pixel_cycle >= 1 && this.pixel_cycle < 258) || (this.pixel_cycle > 320 && this.pixel_cycle < 337)) {
                 this.update_shift_regs();
                 const CHR_BANK = (this.control & PpuControlFlags.BG_TILE_SELECT) << 8;
-                switch ((this.pixel_cycle - 1) % 8) {
+                switch ((this.pixel_cycle - 1) & 7) {
                     case 0:
                         this.transfer_registers();
                         this.temp_nt_byte = this.bus.read(PPU_NAMETABLE_START_ADDR | (this.v & 0x0FFF));
@@ -333,10 +333,11 @@ export class Ppu2C02 {
                 }
             }
             const color = this.bus.read(PPU_PALETTE_START_ADDR | (pixel === 0x00 ? 0 : (palette << 2) | pixel));
-            const idx = this.scanline * 256 + this.pixel_cycle;
-            for (let i = 0; i < 3; i++) {
-                this.frame_data[idx * 3 + i] = PALLETE_TABLE[color * 3 + i];
-            }
+            const idx = (this.scanline * 256 + this.pixel_cycle) * 3;
+            const pal_idx = color * 3;
+            this.frame_data[idx] = PALLETE_TABLE[pal_idx];
+            this.frame_data[idx + 1] = PALLETE_TABLE[pal_idx + 1];
+            this.frame_data[idx + 2] = PALLETE_TABLE[pal_idx + 2];
             //#endregion
         } else if (this.pixel_cycle < 4) {
             const idx = this.scanline * 256 + this.pixel_cycle;
