@@ -25,7 +25,7 @@ import { AddressingMode, Instruction } from "./structs.js";
  * TODO: Remove and/or inline this
  */
 function illegal_opcode(opcode: u8, mnemonic: string, addr_mode: AddressingMode): [AddressingMode, Instruction] {
-    console.warn("Illegal opcode: ", opcode, mnemonic);
+    // console.warn("Illegal opcode: ", opcode, mnemonic);
     return [addr_mode, Instruction.NOP];
 }
 

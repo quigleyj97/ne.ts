@@ -43,14 +43,16 @@ export class Bus {
 
     /** Read from the address bus */
     public read(addr: u16) {
-        for (const map of this.devices) {
-            if (addr < map.start || addr > map.end) {
-                continue;
+        // normally I'd for..of or .map() this
+        // but this is extremely-hot-path code
+        for (let i = 0; i < this.devices.length; i++) {
+            const map = this.devices[i];
+            if (addr >= map.start && addr <= map.end) {
+                const mapped_addr = (addr - map.start) & map.mask;
+                const val = 0xFF & map.dev.read(mapped_addr);
+                this.last_bus_val = val;
+                return val;
             }
-            const mapped_addr = (addr - map.start) & map.mask;
-            const val = 0xFF & map.dev.read(mapped_addr);
-            this.last_bus_val = val;
-            return val;
         }
         return this.last_bus_val;
     }
@@ -59,13 +61,13 @@ export class Bus {
     public write(addr: u16, data: u8) {
         this.last_bus_val = data;
 
-        for (const map of this.devices) {
-            if (addr < map.start || addr > map.end) {
-                continue;
+        for (let i = 0; i < this.devices.length; i++) {
+            const map = this.devices[i];
+            if (addr >= map.start && addr <= map.end) {
+                const mapped_addr = (addr - map.start) & map.mask;
+                map.dev.write(mapped_addr, 0xFF & data);
+                return;
             }
-            const mapped_addr = (addr - map.start) & map.mask;
-            map.dev.write(mapped_addr, 0xFF & data);
-            return;
         }
     }
 }
