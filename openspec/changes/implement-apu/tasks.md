@@ -9,15 +9,15 @@
 - Browser requirements: Chrome 140+, Firefox 140+, Safari 26+
 
 ## 1. Foundation & Bus Integration
-- [ ] 1.1 Create `src/devices/apu/constants.ts` with register addresses and timing constants
-- [ ] 1.2 Create `src/devices/apu/tables.ts` with lookup tables (length counter, noise periods, DMC rates)
-- [ ] 1.3 Implement `IBusDevice` interface on `Apu2A03` class (read/write methods)
-- [ ] 1.4 Add register read handler for $4015 status register
-- [ ] 1.5 Add register write handler routing for $4000-$4017
-- [ ] 1.6 Map APU to CPU bus in `NesEmulator` constructor ($4000-$4017, mask 0xFFFF)
-- [ ] 1.7 Add `clock()` method stub to `Apu2A03` class
-- [ ] 1.8 Integrate `apu.clock()` call in `NesEmulator.tick()` every CPU cycle
-- [ ] 1.9 Write unit tests for bus integration and register mapping
+- [x] 1.1 Create `src/devices/apu/constants.ts` with register addresses and timing constants
+- [x] 1.2 Create `src/devices/apu/tables.ts` with lookup tables (length counter, noise periods, DMC rates)
+- [x] 1.3 Implement `IBusDevice` interface on `Apu2A03` class (read/write methods)
+- [x] 1.4 Add register read handler for $4015 status register
+- [x] 1.5 Add register write handler routing for $4000-$4017
+- [x] 1.6 Map APU to CPU bus in `NesEmulator` constructor ($4000-$4017, mask 0xFFFF)
+- [x] 1.7 Add `clock()` method stub to `Apu2A03` class
+- [x] 1.8 Integrate `apu.clock()` call in `NesEmulator.tick()` every CPU cycle
+- [x] 1.9 Write unit tests for bus integration and register mapping
 
 ## 2. Envelope Unit
 - [ ] 2.1 Create `src/devices/apu/units/envelope.ts`

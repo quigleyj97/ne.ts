@@ -5,12 +5,14 @@ import { Bus } from "./bus.js";
 import { Ppu2C02, PpuControlPortMapper } from "./ppu.js";
 import { ControllerDMAAdaptor, ControllerButton } from "./controller.js";
 import { OamDmaController } from "./dma.js";
+import { Apu2A03, APU_START_ADDR, APU_END_ADDR, APU_MASK } from "./apu.js";
 
 /** A class representing the NES as a whole */
 export class NesEmulator {
     private cpu: Cpu6502;
     private ppu: Ppu2C02;
     private ppuMapper: PpuControlPortMapper;
+    private apu: Apu2A03 | ReturnType<typeof Apu2A03.build>;
     private controller_dma: ControllerDMAAdaptor;
     private oam_dma: OamDmaController;
     private ram: Ram;
@@ -42,6 +44,14 @@ export class NesEmulator {
             start: ControllerDMAAdaptor.START_ADDR,
             end: ControllerDMAAdaptor.END_ADDR,
             mask: ControllerDMAAdaptor.MASK
+        });
+        // Map APU to CPU bus
+        this.apu = Apu2A03.build();
+        cpuBus.map_device({
+            dev: this.apu,
+            start: APU_START_ADDR,
+            end: APU_END_ADDR,
+            mask: APU_MASK
         });
         let ppuBus = new Bus();
         ppuBus.map_device({
@@ -105,6 +115,8 @@ export class NesEmulator {
             this.cpu_cycle_counter = 0;
             this.controller_dma.tick();
             this.oam_dma.tick();
+            // Clock APU once per CPU cycle
+            this.apu.clock();
             if (this.is_cpu_idle && !this.oam_dma.is_dma_active) {
                 if (!debug) {
                     this.cpu.exec();
