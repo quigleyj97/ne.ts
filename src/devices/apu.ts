@@ -1,4 +1,5 @@
 import { IBusDevice, DummyBusDevice, u8, u16 } from "../utils/index.js";
+import { PulseChannel } from "./apu/channels/pulse.js";
 
 //#region APU Register Address Constants
 
@@ -245,11 +246,14 @@ export class Apu2A03 implements IBusDevice {
     private registers: Uint8Array;
     //#endregion
 
-    //#region Channel State (Placeholder)
-    // These will be implemented in later phases
-    // For now, just track basic state needed for status register
-    private pulse1_length_counter: u8 = 0;
-    private pulse2_length_counter: u8 = 0;
+    //#region Channel State
+    /** Pulse 1 channel */
+    private pulse1: PulseChannel;
+    
+    /** Pulse 2 channel */
+    private pulse2: PulseChannel;
+    
+    // Placeholder for other channels (to be implemented in later phases)
     private triangle_length_counter: u8 = 0;
     private noise_length_counter: u8 = 0;
     private dmc_bytes_remaining: u16 = 0;
@@ -262,10 +266,10 @@ export class Apu2A03 implements IBusDevice {
     //#region Audio Context (Legacy - Will be replaced)
     /** The main WebAudio context */
     private ctx: AudioContext | null = null;
-    /** The first square wave voice */
-    private pulse1: OscillatorNode | null = null;
-    /** The second square wave voice */
-    private pulse2: OscillatorNode | null = null;
+    /** The first square wave voice (legacy WebAudio, will be removed) */
+    private legacyPulse1: OscillatorNode | null = null;
+    /** The second square wave voice (legacy WebAudio, will be removed) */
+    private legacyPulse2: OscillatorNode | null = null;
     /** The triangle wave voice */
     private tri: OscillatorNode | null = null;
     /** A gain node for global volume control */
@@ -273,6 +277,10 @@ export class Apu2A03 implements IBusDevice {
     //#endregion
 
     protected constructor() {
+        // Initialize pulse channels
+        this.pulse1 = new PulseChannel(1);
+        this.pulse2 = new PulseChannel(2);
+        
         // Initialize register storage
         this.registers = new Uint8Array(24);
         
@@ -287,12 +295,12 @@ export class Apu2A03 implements IBusDevice {
             this.out.gain.setValueAtTime(0, 1); // default volume is 0 (muted)
             this.out.connect(this.ctx.destination);
 
-            this.pulse1 = this.ctx.createOscillator();
-            this.pulse1.type = "square";
-            this.pulse1.connect(this.out);
-            this.pulse2 = this.ctx.createOscillator();
-            this.pulse2.type = "square";
-            this.pulse2.connect(this.out);
+            this.legacyPulse1 = this.ctx.createOscillator();
+            this.legacyPulse1.type = "square";
+            this.legacyPulse1.connect(this.out);
+            this.legacyPulse2 = this.ctx.createOscillator();
+            this.legacyPulse2.type = "square";
+            this.legacyPulse2.connect(this.out);
 
             this.tri = this.ctx.createOscillator();
             this.tri.type = "triangle";
@@ -383,9 +391,11 @@ export class Apu2A03 implements IBusDevice {
         // Clear all registers
         this.registers.fill(0);
         
-        // Reset channel state
-        this.pulse1_length_counter = 0;
-        this.pulse2_length_counter = 0;
+        // Reset pulse channels
+        this.pulse1.reset();
+        this.pulse2.reset();
+        
+        // Reset placeholder channel state
         this.triangle_length_counter = 0;
         this.noise_length_counter = 0;
         this.dmc_bytes_remaining = 0;
@@ -413,12 +423,12 @@ export class Apu2A03 implements IBusDevice {
         let status = 0;
         
         // Bit 0: Pulse 1 length counter > 0
-        if (this.pulse1_length_counter > 0) {
+        if (this.pulse1.isActive()) {
             status |= 0x01;
         }
         
         // Bit 1: Pulse 2 length counter > 0
-        if (this.pulse2_length_counter > 0) {
+        if (this.pulse2.isActive()) {
             status |= 0x02;
         }
         
@@ -460,14 +470,10 @@ export class Apu2A03 implements IBusDevice {
      */
     private writeStatus(value: u8): void {
         // Bit 0: Enable/disable Pulse 1
-        if ((value & 0x01) === 0) {
-            this.pulse1_length_counter = 0;
-        }
+        this.pulse1.setEnabled((value & 0x01) !== 0);
         
         // Bit 1: Enable/disable Pulse 2
-        if ((value & 0x02) === 0) {
-            this.pulse2_length_counter = 0;
-        }
+        this.pulse2.setEnabled((value & 0x02) !== 0);
         
         // Bit 2: Enable/disable Triangle
         if ((value & 0x04) === 0) {
@@ -498,23 +504,21 @@ export class Apu2A03 implements IBusDevice {
     //#region Channel Write Handlers (Stubs)
     
     /** Write to Pulse 1 channel register
-     * 
+     *
      * @param offset - Register offset within channel (0-3)
      * @param value - Value to write
      */
     private writePulse1(offset: u8, value: u8): void {
-        // Stub for Phase 1A
-        // Will be implemented in pulse channel phase
+        this.pulse1.write(offset, value);
     }
 
     /** Write to Pulse 2 channel register
-     * 
+     *
      * @param offset - Register offset within channel (0-3)
      * @param value - Value to write
      */
     private writePulse2(offset: u8, value: u8): void {
-        // Stub for Phase 1A
-        // Will be implemented in pulse channel phase
+        this.pulse2.write(offset, value);
     }
 
     /** Write to Triangle channel register

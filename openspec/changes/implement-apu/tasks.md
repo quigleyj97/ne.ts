@@ -39,20 +39,20 @@
 - [x] 3.8 Write unit tests for sweep unit (up/down, negate difference between channels)
 
 ## 4. Pulse Channels
-- [ ] 4.1 Create `src/devices/apu/channels/pulse.ts`
-- [ ] 4.2 Implement `PulseChannel` class with state variables using type conventions: `u8`/`u16` for actual hardware register emulation that needs bit masking, `number` for emulator-only tracking variables
-- [ ] 4.3 Add duty cycle sequences (12.5%, 25%, 50%, 75%) as constant arrays
-- [ ] 4.4 Integrate `Envelope` unit instance
-- [ ] 4.5 Integrate `SweepUnit` instance (with onesComplement flag for Pulse 1)
-- [ ] 4.6 Implement length counter logic
-- [ ] 4.7 Implement register write handlers for $4000-$4003 (Pulse 1) and $4004-$4007 (Pulse 2) using `u8` types for register data
-- [ ] 4.8 Implement `clock()` method for timer and duty cycle stepping (follow PPU pattern for efficient hot loop execution - see [`src/devices/ppu.ts`](../../../src/devices/ppu.ts))
-- [ ] 4.9 Implement `clockQuarter()` for envelope clocking (called by frame counter)
-- [ ] 4.10 Implement `clockHalf()` for sweep and length counter clocking (called by frame counter)
-- [ ] 4.11 Implement `output()` method returning 0-15 based on duty cycle, envelope, and muting
-- [ ] 4.12 Implement phase reset on $4003/$4007 write (hardware quirk)
-- [ ] 4.13 Implement muting conditions (timer < 8, sweep target > $7FF)
-- [ ] 4.14 Write unit tests for pulse channels (duty cycles, envelope, sweep, length counter, muting)
+- [x] 4.1 Create `src/devices/apu/channels/pulse.ts`
+- [x] 4.2 Implement `PulseChannel` class with state variables using type conventions: `u8`/`u16` for actual hardware register emulation that needs bit masking, `number` for emulator-only tracking variables
+- [x] 4.3 Add duty cycle sequences (12.5%, 25%, 50%, 75%) as constant arrays
+- [x] 4.4 Integrate `Envelope` unit instance
+- [x] 4.5 Integrate `SweepUnit` instance (with onesComplement flag for Pulse 1)
+- [x] 4.6 Implement length counter logic
+- [x] 4.7 Implement register write handlers for $4000-$4003 (Pulse 1) and $4004-$4007 (Pulse 2) using `u8` types for register data
+- [x] 4.8 Implement `clock()` method for timer and duty cycle stepping (follow PPU pattern for efficient hot loop execution - see [`src/devices/ppu.ts`](../../../src/devices/ppu.ts))
+- [x] 4.9 Implement `clockQuarter()` for envelope clocking (called by frame counter)
+- [x] 4.10 Implement `clockHalf()` for sweep and length counter clocking (called by frame counter)
+- [x] 4.11 Implement `output()` method returning 0-15 based on duty cycle, envelope, and muting
+- [x] 4.12 Implement phase reset on $4003/$4007 write (hardware quirk)
+- [x] 4.13 Implement muting conditions (timer < 8, sweep target > $7FF)
+- [x] 4.14 Write unit tests for pulse channels (duty cycles, envelope, sweep, length counter, muting)
 
 ## 5. Triangle Channel
 - [ ] 5.1 Create `src/devices/apu/channels/triangle.ts`
