@@ -70,18 +70,18 @@
 - [x] 5.13 Write unit tests for triangle channel (waveform, linear counter, length counter, muting)
 
 ## 6. Noise Channel
-- [ ] 6.1 Create `src/devices/apu/channels/noise.ts`
-- [ ] 6.2 Implement `NoiseChannel` class with state variables using type conventions
-- [ ] 6.3 Initialize 15-bit LFSR shift register to 1 (not 0 - hardware quirk)
-- [ ] 6.4 Add noise period lookup table constant
-- [ ] 6.5 Integrate `Envelope` unit instance
-- [ ] 6.6 Implement length counter logic
-- [ ] 6.7 Implement register write handlers for $400C, $400E, $400F
-- [ ] 6.8 Implement `clock()` method with LFSR feedback logic (long mode: bits 0^1, short mode: bits 0^6)
-- [ ] 6.9 Implement `clockQuarter()` for envelope clocking
-- [ ] 6.10 Implement `clockHalf()` for length counter clocking
-- [ ] 6.11 Implement `output()` method based on LFSR bit 0 and envelope
-- [ ] 6.12 Write unit tests for noise channel (LFSR sequence, mode switching, envelope, length counter)
+- [x] 6.1 Create `src/devices/apu/channels/noise.ts`
+- [x] 6.2 Implement `NoiseChannel` class with state variables using type conventions
+- [x] 6.3 Initialize 15-bit LFSR shift register to 1 (not 0 - hardware quirk)
+- [x] 6.4 Add noise period lookup table constant
+- [x] 6.5 Integrate `Envelope` unit instance
+- [x] 6.6 Implement length counter logic
+- [x] 6.7 Implement register write handlers for $400C, $400E, $400F
+- [x] 6.8 Implement `clock()` method with LFSR feedback logic (long mode: bits 0^1, short mode: bits 0^6)
+- [x] 6.9 Implement `clockQuarter()` for envelope clocking
+- [x] 6.10 Implement `clockHalf()` for length counter clocking
+- [x] 6.11 Implement `output()` method based on LFSR bit 0 and envelope
+- [x] 6.12 Write unit tests for noise channel (LFSR sequence, mode switching, envelope, length counter)
 
 ## 7. DMC Channel
 - [ ] 7.1 Create `src/devices/apu/channels/dmc. ts`
