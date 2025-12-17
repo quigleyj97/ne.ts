@@ -20,23 +20,23 @@
 - [x] 1.9 Write unit tests for bus integration and register mapping
 
 ## 2. Envelope Unit
-- [ ] 2.1 Create `src/devices/apu/units/envelope.ts`
-- [ ] 2.2 Implement envelope state variables using appropriate types: `number` for internal tracking (divider, decayLevel), flags as `boolean`
-- [ ] 2.3 Implement `write(data: u8)` method to configure envelope
-- [ ] 2.4 Implement `clock()` method for envelope timing
-- [ ] 2.5 Implement `restart()` method to reset envelope
-- [ ] 2.6 Implement `output()` method returning current volume (0-15)
-- [ ] 2.7 Write unit tests for envelope behavior (attack, decay, loop, constant volume)
+- [x] 2.1 Create `src/devices/apu/units/envelope.ts`
+- [x] 2.2 Implement envelope state variables using appropriate types: `number` for internal tracking (divider, decayLevel), flags as `boolean`
+- [x] 2.3 Implement `write(data: u8)` method to configure envelope
+- [x] 2.4 Implement `clock()` method for envelope timing
+- [x] 2.5 Implement `restart()` method to reset envelope
+- [x] 2.6 Implement `output()` method returning current volume (0-15)
+- [x] 2.7 Write unit tests for envelope behavior (attack, decay, loop, constant volume)
 
 ## 3. Sweep Unit
-- [ ] 3.1 Create `src/devices/apu/units/sweep.ts`
-- [ ] 3.2 Implement sweep state variables using appropriate types: `number` for internal tracking, `boolean` for flags
-- [ ] 3.3 Add `onesComplement` flag to distinguish Pulse 1 vs Pulse 2 behavior
-- [ ] 3.4 Implement `write(data: u8)` method to configure sweep
-- [ ] 3.5 Implement `clock(currentPeriod: number)` method returning new period (uses `number` for internal tracking)
-- [ ] 3.6 Implement `isMuting(currentPeriod: u16)` method for muting logic
-- [ ] 3.7 Implement sweep target period calculation (ones' complement vs two's complement)
-- [ ] 3.8 Write unit tests for sweep unit (up/down, negate difference between channels)
+- [x] 3.1 Create `src/devices/apu/units/sweep.ts`
+- [x] 3.2 Implement sweep state variables using appropriate types: `number` for internal tracking, `boolean` for flags
+- [x] 3.3 Add `onesComplement` flag to distinguish Pulse 1 vs Pulse 2 behavior
+- [x] 3.4 Implement `write(data: u8)` method to configure sweep
+- [x] 3.5 Implement `clock(currentPeriod: number)` method returning new period (uses `number` for internal tracking)
+- [x] 3.6 Implement `isMuting(currentPeriod: u16)` method for muting logic
+- [x] 3.7 Implement sweep target period calculation (ones' complement vs two's complement)
+- [x] 3.8 Write unit tests for sweep unit (up/down, negate difference between channels)
 
 ## 4. Pulse Channels
 - [ ] 4.1 Create `src/devices/apu/channels/pulse.ts`
