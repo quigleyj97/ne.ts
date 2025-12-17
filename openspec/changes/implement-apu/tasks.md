@@ -55,19 +55,19 @@
 - [x] 4.14 Write unit tests for pulse channels (duty cycles, envelope, sweep, length counter, muting)
 
 ## 5. Triangle Channel
-- [ ] 5.1 Create `src/devices/apu/channels/triangle.ts`
-- [ ] 5.2 Implement `TriangleChannel` class with state variables using type conventions (hardware registers: `u8`/`u16`, tracking: `number`)
-- [ ] 5.3 Add 32-step triangle wave sequence as constant array
-- [ ] 5.4 Implement linear counter logic (reload value, reload flag, control flag)
-- [ ] 5.5 Implement length counter logic
-- [ ] 5.6 Implement register write handlers for $4008, $400A, $400B
-- [ ] 5.7 Implement `clock()` method for timer and sequence stepping
-- [ ] 5.8 Implement `clockQuarter()` for linear counter clocking
-- [ ] 5.9 Implement `clockHalf()` for length counter clocking
-- [ ] 5.10 Implement `output()` method returning triangle waveform value (0-15)
-- [ ] 5.11 Implement linear counter reload flag behavior (hardware quirk)
-- [ ] 5.12 Implement muting condition (timer < 2)
-- [ ] 5.13 Write unit tests for triangle channel (waveform, linear counter, length counter, muting)
+- [x] 5.1 Create `src/devices/apu/channels/triangle.ts`
+- [x] 5.2 Implement `TriangleChannel` class with state variables using type conventions (hardware registers: `u8`/`u16`, tracking: `number`)
+- [x] 5.3 Add 32-step triangle wave sequence as constant array
+- [x] 5.4 Implement linear counter logic (reload value, reload flag, control flag)
+- [x] 5.5 Implement length counter logic
+- [x] 5.6 Implement register write handlers for $4008, $400A, $400B
+- [x] 5.7 Implement `clock()` method for timer and sequence stepping
+- [x] 5.8 Implement `clockQuarter()` for linear counter clocking
+- [x] 5.9 Implement `clockHalf()` for length counter clocking
+- [x] 5.10 Implement `output()` method returning triangle waveform value (0-15)
+- [x] 5.11 Implement linear counter reload flag behavior (hardware quirk)
+- [x] 5.12 Implement muting condition (timer < 2)
+- [x] 5.13 Write unit tests for triangle channel (waveform, linear counter, length counter, muting)
 
 ## 6. Noise Channel
 - [ ] 6.1 Create `src/devices/apu/channels/noise.ts`
@@ -102,18 +102,18 @@
 - [ ] 7.16 Write unit tests for DMC channel (rate timer, sample playback, looping, IRQ, direct load)
 
 ## 8. Frame Counter
-- [ ] 8.1 Create `src/devices/apu/units/frame-counter.ts`
-- [ ] 8.2 Implement `FrameCounter` class with state variables (mode, IRQ inhibit, interrupt flag, cycle counter)
-- [ ] 8.3 Implement 4-step mode timing (cycles 7459, 14913, 22371, 29829)
-- [ ] 8.4 Implement 5-step mode timing (cycles 7459, 14913, 22371, 29829, 37281)
-- [ ] 8.5 Implement delayed write logic (3-4 cycle delay for $4017 writes)
-- [ ] 8.6 Implement immediate clock on 5-step mode write
-- [ ] 8.7 Implement IRQ generation in 4-step mode
-- [ ] 8.8 Implement IRQ inhibit flag handling
-- [ ] 8.9 Implement `write(data: u8)` method for $4017 register
-- [ ] 8.10 Implement `clock()` method returning events (quarter frame, half frame, IRQ)
-- [ ] 8.11 Integrate frame counter events in `Apu2A03` to clock all channels
-- [ ] 8.12 Write unit tests for frame counter (4-step timing, 5-step timing, IRQ, delayed write)
+- [x] 8.1 Create `src/devices/apu/units/frame-counter.ts`
+- [x] 8.2 Implement `FrameCounter` class with state variables (mode, IRQ inhibit, interrupt flag, cycle counter)
+- [x] 8.3 Implement 4-step mode timing (cycles 7459, 14913, 22371, 29829)
+- [x] 8.4 Implement 5-step mode timing (cycles 7459, 14913, 22371, 29829, 37281)
+- [x] 8.5 Implement delayed write logic (3-4 cycle delay for $4017 writes)
+- [x] 8.6 Implement immediate clock on 5-step mode write
+- [x] 8.7 Implement IRQ generation in 4-step mode
+- [x] 8.8 Implement IRQ inhibit flag handling
+- [x] 8.9 Implement `write(data: u8)` method for $4017 register
+- [x] 8.10 Implement `clock()` method returning events (quarter frame, half frame, IRQ)
+- [x] 8.11 Integrate frame counter events in `Apu2A03` to clock all channels
+- [x] 8.12 Write unit tests for frame counter (4-step timing, 5-step timing, IRQ, delayed write)
 
 ## 9. APU Main Class Integration
 - [ ] 9.1 Instantiate pulse1, pulse2, triangle, noise, dmc channel objects in `Apu2A03`

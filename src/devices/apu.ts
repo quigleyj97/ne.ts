@@ -1,5 +1,7 @@
 import { IBusDevice, DummyBusDevice, u8, u16 } from "../utils/index.js";
 import { PulseChannel } from "./apu/channels/pulse.js";
+// Import units to ensure they are compiled (used in later integration phases)
+import "./apu/units/index.js";
 
 //#region APU Register Address Constants
 
