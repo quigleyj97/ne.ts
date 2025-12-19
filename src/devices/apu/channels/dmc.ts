@@ -339,11 +339,11 @@ export class DmcChannel {
 
     /**
      * Start sample playback
-     * 
+     *
      * Called when the DMC channel is enabled via $4015.
      * If no sample is currently playing (bytes remaining = 0),
      * this starts playback of the configured sample.
-     * 
+     *
      * If a sample is already playing, this has no effect.
      */
     public start(): void {
@@ -351,6 +351,16 @@ export class DmcChannel {
             this.currentAddress = this.sampleAddress;
             this.bytesRemaining = this.sampleLength;
         }
+    }
+
+    /**
+     * Stop sample playback
+     *
+     * Called when the DMC channel is disabled via $4015 bit 4.
+     * Clears the bytes remaining counter, stopping playback.
+     */
+    public stop(): void {
+        this.bytesRemaining = 0;
     }
 
     /**

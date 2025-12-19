@@ -1,8 +1,9 @@
 import { IBusDevice, DummyBusDevice, u8, u16 } from "../utils/index.js";
 import { PulseChannel } from "./apu/channels/pulse.js";
+import { TriangleChannel } from "./apu/channels/triangle.js";
+import { NoiseChannel } from "./apu/channels/noise.js";
 import { DmcChannel } from "./apu/channels/dmc.js";
-// Import units to ensure they are compiled (used in later integration phases)
-import "./apu/units/index.js";
+import { FrameCounter } from "./apu/units/frame-counter.js";
 
 //#region APU Register Address Constants
 
@@ -256,14 +257,22 @@ export class Apu2A03 implements IBusDevice {
     /** Pulse 2 channel */
     private pulse2: PulseChannel;
     
-    // Placeholder for other channels (to be implemented in later phases)
-    private triangle_length_counter: u8 = 0;
-    private noise_length_counter: u8 = 0;
-    private dmc_bytes_remaining: u16 = 0;
+    /** Triangle channel */
+    private triangle: TriangleChannel;
     
-    // Interrupt flags
-    private frame_interrupt_flag: boolean = false;
-    private dmc_interrupt_flag: boolean = false;
+    /** Noise channel */
+    private noise: NoiseChannel;
+    
+    /** DMC channel */
+    private dmc: DmcChannel;
+    //#endregion
+
+    //#region Frame Counter
+    /** Frame counter for timing APU events */
+    private frameCounter: FrameCounter;
+    
+    /** CPU cycle counter for frame counter synchronization */
+    private cpuCycle: number = 0;
     //#endregion
 
     //#region Audio Context (Legacy - Will be replaced)
@@ -280,9 +289,15 @@ export class Apu2A03 implements IBusDevice {
     //#endregion
 
     protected constructor() {
-        // Initialize pulse channels
+        // Initialize all channels
         this.pulse1 = new PulseChannel(1);
         this.pulse2 = new PulseChannel(2);
+        this.triangle = new TriangleChannel();
+        this.noise = new NoiseChannel();
+        this.dmc = new DmcChannel();
+        
+        // Initialize frame counter
+        this.frameCounter = new FrameCounter();
         
         // Initialize register storage
         this.registers = new Uint8Array(24);
@@ -377,35 +392,65 @@ export class Apu2A03 implements IBusDevice {
     }
 
     /** Clock the APU by one CPU cycle
-     * 
-     * The APU is clocked once per CPU cycle. This method will be implemented
-     * in later phases to handle frame counter sequencing and channel clocking.
+     *
+     * The APU is clocked once per CPU cycle. This handles:
+     * - Frame counter events (quarter-frame, half-frame, IRQ)
+     * - Channel timer clocking
+     * - Envelope/sweep/length counter updates
      */
     public clock(): void {
-        // Stub for Phase 1A
-        // Will be implemented in frame counter phase
+        // Clock frame counter and get events
+        const events = this.frameCounter.clock(this.cpuCycle);
+        
+        // Process quarter-frame events (envelopes and linear counter)
+        if (events.quarterFrame) {
+            this.pulse1.clockEnvelope();
+            this.pulse2.clockEnvelope();
+            this.triangle.clockLinearCounter();
+            this.noise.clockEnvelope();
+        }
+        
+        // Process half-frame events (length counters and sweep units)
+        if (events.halfFrame) {
+            this.pulse1.clockLengthCounter();
+            this.pulse1.clockSweep();
+            this.pulse2.clockLengthCounter();
+            this.pulse2.clockSweep();
+            this.triangle.clockLengthCounter();
+            this.noise.clockLengthCounter();
+        }
+        
+        // Clock all channel timers (happens every APU cycle)
+        this.pulse1.clockTimer();
+        this.pulse2.clockTimer();
+        this.triangle.clock();
+        this.noise.clockTimer();
+        this.dmc.clock();
+        
+        // Increment CPU cycle counter
+        this.cpuCycle++;
     }
 
     /** Reset APU to power-on state
-     * 
+     *
      * Initializes all registers and state to their power-on values.
      */
     public reset(): void {
         // Clear all registers
         this.registers.fill(0);
         
-        // Reset pulse channels
+        // Reset all channels
         this.pulse1.reset();
         this.pulse2.reset();
+        this.triangle.reset();
+        this.noise.reset();
+        this.dmc.reset();
         
-        // Reset placeholder channel state
-        this.triangle_length_counter = 0;
-        this.noise_length_counter = 0;
-        this.dmc_bytes_remaining = 0;
+        // Reset frame counter
+        this.frameCounter.reset();
         
-        // Clear interrupt flags
-        this.frame_interrupt_flag = false;
-        this.dmc_interrupt_flag = false;
+        // Reset CPU cycle counter
+        this.cpuCycle = 0;
         
         // Write to status register to silence all channels
         this.writeStatus(0);
@@ -418,7 +463,7 @@ export class Apu2A03 implements IBusDevice {
     //#region Status Register ($4015) Implementation
     
     /** Read status register ($4015)
-     * 
+     *
      * Returns channel length counter status in bits 0-4 and interrupt flags in bits 6-7.
      * Reading this register clears the frame interrupt flag.
      */
@@ -436,38 +481,38 @@ export class Apu2A03 implements IBusDevice {
         }
         
         // Bit 2: Triangle length counter > 0
-        if (this.triangle_length_counter > 0) {
+        if (this.triangle.isEnabled()) {
             status |= 0x04;
         }
         
         // Bit 3: Noise length counter > 0
-        if (this.noise_length_counter > 0) {
+        if (this.noise.isActive()) {
             status |= 0x08;
         }
         
         // Bit 4: DMC bytes remaining > 0
-        if (this.dmc_bytes_remaining > 0) {
+        if (this.dmc.isActive()) {
             status |= 0x10;
         }
         
         // Bit 6: Frame interrupt flag
-        if (this.frame_interrupt_flag) {
+        if (this.frameCounter.isIrqPending()) {
             status |= 0x40;
         }
         
         // Bit 7: DMC interrupt flag
-        if (this.dmc_interrupt_flag) {
+        if (this.dmc.getIrqFlag()) {
             status |= 0x80;
         }
         
         // Reading status clears the frame interrupt flag
-        this.frame_interrupt_flag = false;
+        this.frameCounter.clearIrqFlag();
         
         return status;
     }
 
     /** Write status register ($4015)
-     * 
+     *
      * Enables/disables channels via bits 0-4.
      * Writing to this register clears the DMC interrupt flag.
      */
@@ -479,27 +524,22 @@ export class Apu2A03 implements IBusDevice {
         this.pulse2.setEnabled((value & 0x02) !== 0);
         
         // Bit 2: Enable/disable Triangle
-        if ((value & 0x04) === 0) {
-            this.triangle_length_counter = 0;
-        }
+        this.triangle.setEnabled((value & 0x04) !== 0);
         
         // Bit 3: Enable/disable Noise
-        if ((value & 0x08) === 0) {
-            this.noise_length_counter = 0;
-        }
+        this.noise.setEnabled((value & 0x08) !== 0);
         
         // Bit 4: Enable/disable DMC
         if ((value & 0x10) === 0) {
-            this.dmc_bytes_remaining = 0;
+            // Disabling DMC stops playback and clears bytes remaining
+            this.dmc.stop();
         } else {
             // If enabling DMC and bytes remaining is 0, restart sample
-            if (this.dmc_bytes_remaining === 0) {
-                // Will be implemented in DMC phase
-            }
+            this.dmc.start();
         }
         
         // Writing to status clears the DMC interrupt flag
-        this.dmc_interrupt_flag = false;
+        this.dmc.clearIrq();
     }
     
     //#endregion
@@ -525,47 +565,63 @@ export class Apu2A03 implements IBusDevice {
     }
 
     /** Write to Triangle channel register
-     * 
+     *
      * @param offset - Register offset within channel (0-3)
      * @param value - Value to write
      */
     private writeTriangle(offset: u8, value: u8): void {
-        // Stub for Phase 1A
-        // Will be implemented in triangle channel phase
+        switch (offset) {
+            case 0: // $4008: Control
+                this.triangle.writeControl(value);
+                break;
+            case 1: // $4009: Unused
+                break;
+            case 2: // $400A: Timer low
+                this.triangle.writeTimerLow(value);
+                break;
+            case 3: // $400B: Length/Timer high
+                this.triangle.writeTimerHigh(value);
+                break;
+        }
     }
 
     /** Write to Noise channel register
-     * 
+     *
      * @param offset - Register offset within channel (0-3)
      * @param value - Value to write
      */
     private writeNoise(offset: u8, value: u8): void {
-        // Stub for Phase 1A
-        // Will be implemented in noise channel phase
+        this.noise.write(offset, value);
     }
 
     /** Write to DMC channel register
-     * 
+     *
      * @param offset - Register offset within channel (0-3)
      * @param value - Value to write
      */
     private writeDmc(offset: u8, value: u8): void {
-        // Stub for Phase 1A
-        // Will be implemented in DMC channel phase
+        switch (offset) {
+            case 0: // $4010: Control
+                this.dmc.writeControl(value);
+                break;
+            case 1: // $4011: Direct load
+                this.dmc.writeDirectLoad(value);
+                break;
+            case 2: // $4012: Sample address
+                this.dmc.writeSampleAddress(value);
+                break;
+            case 3: // $4013: Sample length
+                this.dmc.writeSampleLength(value);
+                break;
+        }
     }
 
     /** Write to frame counter register ($4017)
-     * 
+     *
      * Configures frame sequencer mode and IRQ behavior.
      */
     private writeFrameCounter(value: u8): void {
-        // Stub for Phase 1A
-        // Will be implemented in frame counter phase
-        
-        // If bit 6 (IRQ inhibit) is set, clear the frame interrupt flag
-        if (value & 0x40) {
-            this.frame_interrupt_flag = false;
-        }
+        this.frameCounter.writeControl(value, this.cpuCycle);
     }
     
     //#endregion

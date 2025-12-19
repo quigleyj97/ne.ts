@@ -116,16 +116,16 @@
 - [x] 8.12 Write unit tests for frame counter (4-step timing, 5-step timing, IRQ, delayed write)
 
 ## 9. APU Main Class Integration
-- [ ] 9.1 Instantiate pulse1, pulse2, triangle, noise, dmc channel objects in `Apu2A03`
-- [ ] 9.2 Instantiate frame counter in `Apu2A03`
-- [ ] 9.3 Implement complete $4015 status register read (all channel length counters, DMC bytes, IRQ flags) using `u8` types
-- [ ] 9.4 Implement complete $4015 write (enable/disable channels, clear DMC interrupt)
-- [ ] 9.5 Implement $4015 read side effect (clear frame interrupt flag - hardware quirk)
-- [ ] 9.6 Implement $4015 write side effects (zero length counters, restart DMC - hardware quirks)
-- [ ] 9.7 Route register writes to appropriate channels based on address
-- [ ] 9.8 Implement frame-accurate sample generation (APU can batch cycles, generate correct samples per frame)
-- [ ] 9.9 Connect frame counter events to channel clock methods (consolidate clocking to minimize hot loop overhead following PPU pattern)
-- [ ] 9.10 Write integration tests for full APU register behavior
+- [x] 9.1 Instantiate pulse1, pulse2, triangle, noise, dmc channel objects in `Apu2A03`
+- [x] 9.2 Instantiate frame counter in `Apu2A03`
+- [x] 9.3 Implement complete $4015 status register read (all channel length counters, DMC bytes, IRQ flags) using `u8` types
+- [x] 9.4 Implement complete $4015 write (enable/disable channels, clear DMC interrupt)
+- [x] 9.5 Implement $4015 read side effect (clear frame interrupt flag - hardware quirk)
+- [x] 9.6 Implement $4015 write side effects (zero length counters, restart DMC - hardware quirks)
+- [x] 9.7 Route register writes to appropriate channels based on address
+- [x] 9.8 Implement frame-accurate sample generation (APU can batch cycles, generate correct samples per frame)
+- [x] 9.9 Connect frame counter events to channel clock methods (consolidate clocking to minimize hot loop overhead following PPU pattern)
+- [x] 9.10 Write integration tests for full APU register behavior
 
 ## 10. Audio Mixing
 - [ ] 10.1 Create `src/devices/apu/audio/mixer.ts`
