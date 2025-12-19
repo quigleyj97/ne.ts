@@ -1,5 +1,6 @@
 import { IBusDevice, DummyBusDevice, u8, u16 } from "../utils/index.js";
 import { PulseChannel } from "./apu/channels/pulse.js";
+import { DmcChannel } from "./apu/channels/dmc.js";
 // Import units to ensure they are compiled (used in later integration phases)
 import "./apu/units/index.js";
 

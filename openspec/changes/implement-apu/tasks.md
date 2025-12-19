@@ -84,22 +84,22 @@
 - [x] 6.12 Write unit tests for noise channel (LFSR sequence, mode switching, envelope, length counter)
 
 ## 7. DMC Channel
-- [ ] 7.1 Create `src/devices/apu/channels/dmc. ts`
-- [ ] 7.2 Implement `DmcChannel` class with state variables using type conventions (rate, loop, IRQ, address, length, output level)
-- [ ] 7.3 Add DMC rate lookup table constant
-- [ ] 7.4 Implement register write handlers for $4010-$4013
-- [ ] 7.5 Implement $4011 direct load (immediate output level change)
-- [ ] 7.6 Implement sample address calculation ($C000 + A * 64)
-- [ ] 7.7 Implement sample length calculation (L * 16 + 1)
-- [ ] 7.8 Implement sample buffer and bit shifting logic
-- [ ] 7.9 Implement `clock()` method with rate timer and sample playback
-- [ ] 7.10 Implement DMA trigger logic (return address when sample needed)
-- [ ] 7.11 Implement `loadSampleByte(byte: u8)` method for DMA integration
-- [ ] 7.12 Implement 7-bit output level/DAC with increment/decrement
-- [ ] 7.13 Implement loop flag behavior (restart or silence when done)
-- [ ] 7.14 Implement IRQ flag generation
-- [ ] 7.15 Implement `output()` method returning current output level (0-127)
-- [ ] 7.16 Write unit tests for DMC channel (rate timer, sample playback, looping, IRQ, direct load)
+- [x] 7.1 Create `src/devices/apu/channels/dmc. ts`
+- [x] 7.2 Implement `DmcChannel` class with state variables using type conventions (rate, loop, IRQ, address, length, output level)
+- [x] 7.3 Add DMC rate lookup table constant
+- [x] 7.4 Implement register write handlers for $4010-$4013
+- [x] 7.5 Implement $4011 direct load (immediate output level change)
+- [x] 7.6 Implement sample address calculation ($C000 + A * 64)
+- [x] 7.7 Implement sample length calculation (L * 16 + 1)
+- [x] 7.8 Implement sample buffer and bit shifting logic
+- [x] 7.9 Implement `clock()` method with rate timer and sample playback
+- [x] 7.10 Implement DMA trigger logic (return address when sample needed)
+- [x] 7.11 Implement `loadSampleByte(byte: u8)` method for DMA integration
+- [x] 7.12 Implement 7-bit output level/DAC with increment/decrement
+- [x] 7.13 Implement loop flag behavior (restart or silence when done)
+- [x] 7.14 Implement IRQ flag generation
+- [x] 7.15 Implement `output()` method returning current output level (0-127)
+- [x] 7.16 Write unit tests for DMC channel (rate timer, sample playback, looping, IRQ, direct load)
 
 ## 8. Frame Counter
 - [x] 8.1 Create `src/devices/apu/units/frame-counter.ts`
