@@ -208,13 +208,13 @@
 - [ ] 17.11 Write dedicated tests for each hardware quirk
 
 ## 18. Early APU Unit Test Suite (Before ROM Integration)
-- [ ] 18.1 Write comprehensive unit tests for each APU channel class
-- [ ] 18.2 Write unit tests for envelope, sweep, and frame counter units
-- [ ] 18.3 Write unit tests for register read/write behavior
+- [x] 18.1 Write comprehensive unit tests for each APU channel class
+- [x] 18.2 Write unit tests for envelope, sweep, and frame counter units
+- [x] 18.3 Write unit tests for register read/write behavior
 - [ ] 18.4 Write unit tests for mixing formulas with known values
-- [ ] 18.5 Write unit tests for each hardware quirk independently
+- [x] 18.5 Write unit tests for each hardware quirk independently
 - [ ] 18.6 Write unit tests for timing synchronization
-- [ ] 18.7 Verify all unit tests pass before ROM testing
+- [x] 18.7 Verify all unit tests pass before ROM testing
 
 ## 19. Test ROM Integration
 - [ ] 19.1 Download blargg's APU test suite: Public domain, from http://slack.net/~ant/nes-tests/ or https://github.com/christopherpow/nes-test-roms
