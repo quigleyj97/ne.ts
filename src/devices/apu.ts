@@ -4,6 +4,7 @@ import { TriangleChannel } from "./apu/channels/triangle.js";
 import { NoiseChannel } from "./apu/channels/noise.js";
 import { DmcChannel } from "./apu/channels/dmc.js";
 import { FrameCounter } from "./apu/units/frame-counter.js";
+import { ApuMixer } from "./apu/audio/mixer.js";
 
 //#region APU Register Address Constants
 
@@ -275,6 +276,14 @@ export class Apu2A03 implements IBusDevice {
     private cpuCycle: number = 0;
     //#endregion
 
+    //#region Audio Mixing
+    /** Audio mixer for combining channel outputs */
+    private mixer: ApuMixer;
+    
+    /** Current mixed audio sample (-1.0 to +1.0) */
+    public currentSample: number = 0;
+    //#endregion
+
     //#region Audio Context (Legacy - Will be replaced)
     /** The main WebAudio context */
     private ctx: AudioContext | null = null;
@@ -298,6 +307,9 @@ export class Apu2A03 implements IBusDevice {
         
         // Initialize frame counter
         this.frameCounter = new FrameCounter();
+        
+        // Initialize audio mixer
+        this.mixer = new ApuMixer();
         
         // Initialize register storage
         this.registers = new Uint8Array(24);
@@ -397,6 +409,7 @@ export class Apu2A03 implements IBusDevice {
      * - Frame counter events (quarter-frame, half-frame, IRQ)
      * - Channel timer clocking
      * - Envelope/sweep/length counter updates
+     * - Audio mixing
      */
     public clock(): void {
         // Clock frame counter and get events
@@ -426,6 +439,15 @@ export class Apu2A03 implements IBusDevice {
         this.triangle.clock();
         this.noise.clockTimer();
         this.dmc.clock();
+        
+        // Mix audio channels into a single sample
+        this.currentSample = this.mixer.mix(
+            this.pulse1.output(),
+            this.pulse2.output(),
+            this.triangle.output(),
+            this.noise.getOutput(),
+            this.dmc.output()
+        );
         
         // Increment CPU cycle counter
         this.cpuCycle++;

@@ -128,13 +128,13 @@
 - [x] 9.10 Write integration tests for full APU register behavior
 
 ## 10. Audio Mixing
-- [ ] 10.1 Create `src/devices/apu/audio/mixer.ts`
-- [ ] 10.2 Implement non-linear pulse mixing formula: 95.88 / ((8128 / (pulse1 + pulse2)) + 100)
-- [ ] 10.3 Implement non-linear TND mixing formula: 159.79 / ((1 / (tri/8227 + noise/12241 + dmc/22638)) + 100)
-- [ ] 10.4 Handle division by zero case (all channels silent → output = 0)
-- [ ] 10.5 Implement `mix(p1, p2, tri, noise, dmc)` method returning -1.0 to +1.0 sample
-- [ ] 10.6 Integrate mixer in `Apu2A03.clock()` to generate mixed samples
-- [ ] 10.7 Write unit tests for mixing formulas with known input/output values
+- [x] 10.1 Create `src/devices/apu/audio/mixer.ts`
+- [x] 10.2 Implement non-linear pulse mixing formula: 95.88 / ((8128 / (pulse1 + pulse2)) + 100)
+- [x] 10.3 Implement non-linear TND mixing formula: 159.79 / ((1 / (tri/8227 + noise/12241 + dmc/22638)) + 100)
+- [x] 10.4 Handle division by zero case (all channels silent → output = 0)
+- [x] 10.5 Implement `mix(p1, p2, tri, noise, dmc)` method returning -1.0 to +1.0 sample
+- [x] 10.6 Integrate mixer in `Apu2A03.clock()` to generate mixed samples
+- [x] 10.7 Write unit tests for mixing formulas with known input/output values
 
 ## 11. Sample Resampler
 - [ ] 11.1 Create `src/devices/apu/audio/resampler.ts`
