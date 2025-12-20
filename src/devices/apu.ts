@@ -219,7 +219,23 @@ export const APU_MASK = 0xFFFF;
 //#endregion
 
 //#region Magic constants
-const SAMPLE_RATE = 44_100; // 44.1 khz
+/** NES APU CPU frequency (NTSC) */
+const CPU_FREQ = 1_789_773; // ~1.79 MHz
+
+/** APU divider - APU clocks at CPU_FREQ / 1 = ~1.79 MHz, samples generated every 2 APU clocks */
+const APU_SAMPLE_DIVIDER = 2;
+
+/** APU native sample rate (CPU_FREQ / APU_SAMPLE_DIVIDER) */
+const APU_SAMPLE_RATE = CPU_FREQ / APU_SAMPLE_DIVIDER; // ~894,886.5 Hz
+
+/** Target audio output sample rate (Web Audio standard) */
+const OUTPUT_SAMPLE_RATE = 48_000; // 48 kHz
+
+/** Batch size for sending samples to worklet (tuned for ~10ms batches at 48kHz) */
+const BATCH_SIZE = 480; // 10ms at 48kHz
+
+/** Sample buffer size (about 100ms worth) */
+const BUFFER_SIZE = 4800; // 100ms at 48kHz
 //#endregion
 
 /** The Audio Processing Unit for the NES.
@@ -235,13 +251,36 @@ const SAMPLE_RATE = 44_100; // 44.1 khz
 export class Apu2A03 implements IBusDevice {
     /** Attempt to create an APU, but return a mock if the environment does not
      * support the WebAudio API
+     *
+     * The method detects AudioWorklet support and returns the appropriate implementation:
+     * - Apu2A03WithWorklet if AudioWorklet is supported (audio output available)
+     * - Apu2A03 if AudioContext exists but AudioWorklet doesn't (no audio output)
+     * - DummyApu if neither is available (no-op implementation)
      */
-    public static build() {
+    public static build(): Apu2A03 | DummyApu {
         try {
-            return new Apu2A03();
+            // Check if AudioContext is available
+            if (typeof AudioContext === 'undefined') {
+                console.warn("AudioContext not available, using mock APU");
+                return new DummyApu();
+            }
+            
+            // Create a test AudioContext to check for AudioWorklet support
+            const testCtx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
+            const hasWorkletSupport = !!testCtx.audioWorklet;
+            testCtx.close();
+            
+            if (hasWorkletSupport) {
+                // AudioWorklet is supported, create enhanced version with audio output
+                return new Apu2A03WithWorklet();
+            } else {
+                // AudioWorklet not supported, use basic APU without audio output
+                console.warn("AudioWorklet not supported, APU will run without audio output");
+                return new Apu2A03();
+            }
         } catch (err) {
             console.log(err);
-            console.warn("This environment does not support WebAudio, using mock APU");
+            console.warn("Error initializing audio, using mock APU");
             return new DummyApu();
         }
     }
@@ -320,7 +359,7 @@ export class Apu2A03 implements IBusDevice {
         try {
             this.ctx = new AudioContext({
                 latencyHint: "interactive",
-                sampleRate: SAMPLE_RATE
+                sampleRate: OUTPUT_SAMPLE_RATE
             });
             this.out = this.ctx.createGain();
             this.out.gain.setValueAtTime(0, 1); // default volume is 0 (muted)
@@ -666,5 +705,321 @@ export class DummyApu implements IBusDevice {
     
     public reset(): void {
         // No-op
+    }
+}
+
+/**
+ * APU with AudioWorklet-based audio output
+ *
+ * Extends the base APU with real-time audio output using the Web Audio API's
+ * AudioWorklet interface. This provides low-latency, glitch-free audio playback
+ * by running the audio processing code on a dedicated audio thread.
+ *
+ * Features:
+ * - AudioWorklet-based audio pipeline for low latency
+ * - Sample rate conversion from APU rate (~894kHz) to output rate (48kHz)
+ * - Batched sample transfer for efficiency
+ * - Buffer level monitoring for rate control
+ * - Enable/disable audio controls
+ * - Automatic AudioContext suspension handling
+ * - Lazy worklet initialization (loaded only when audio is first enabled)
+ */
+export class Apu2A03WithWorklet extends Apu2A03 {
+    //#region Audio Pipeline State
+    
+    /** Web Audio context */
+    private audioContext: AudioContext;
+    
+    /** AudioWorklet node for audio processing */
+    private workletNode: AudioWorkletNode | null = null;
+    
+    /** Whether the worklet has been initialized */
+    private workletInitialized: boolean = false;
+    
+    /** Promise for worklet initialization (to avoid duplicate loads) */
+    private workletInitPromise: Promise<void> | null = null;
+    
+    /** Resampler for converting APU samples to output rate */
+    private resampler: Resampler;
+    
+    /** Sample buffer for batching before sending to worklet */
+    private sampleBatchBuffer: Float32Array;
+    
+    /** Current position in batch buffer */
+    private batchBufferIndex: number = 0;
+    
+    /** Whether audio output is enabled */
+    private audioEnabled: boolean = false;
+    
+    /** Counter for tracking when to pull samples from resampler */
+    private sampleCounter: number = 0;
+    
+    /** How many APU clocks between resampler pulls (tuned empirically) */
+    private readonly PULL_INTERVAL = 2048;
+    
+    /** Path to the worklet processor module */
+    private workletPath: string;
+    
+    //#endregion
+    
+    /**
+     * Create an APU with AudioWorklet support
+     *
+     * The constructor is synchronous - AudioWorklet initialization happens
+     * lazily when audio is first enabled via enableAudio().
+     *
+     * @param workletPath - Optional path to worklet processor module
+     */
+    constructor(workletPath?: string) {
+        super();
+        
+        // Create AudioContext
+        this.audioContext = new AudioContext({
+            latencyHint: "interactive",
+            sampleRate: OUTPUT_SAMPLE_RATE
+        });
+        
+        // Store worklet path for lazy initialization
+        this.workletPath = workletPath || './apu/audio/worklet-processor.js';
+        
+        // Create resampler to convert from APU rate to output rate
+        this.resampler = new Resampler(APU_SAMPLE_RATE, OUTPUT_SAMPLE_RATE);
+        
+        // Create batch buffer for efficient sample transfer
+        this.sampleBatchBuffer = new Float32Array(BATCH_SIZE);
+    }
+    
+    /**
+     * Initialize the AudioWorklet module and create the worklet node
+     *
+     * This is called lazily when audio is first enabled.
+     */
+    private async initializeAudioWorklet(): Promise<void> {
+        // If already initialized or currently initializing, return the existing promise
+        if (this.workletInitialized) {
+            return;
+        }
+        
+        if (this.workletInitPromise) {
+            return this.workletInitPromise;
+        }
+        
+        // Create and store the initialization promise
+        this.workletInitPromise = (async () => {
+            try {
+                // Load the AudioWorklet module
+                await this.audioContext.audioWorklet.addModule(this.workletPath);
+                
+                // Create the AudioWorkletNode
+                this.workletNode = new AudioWorkletNode(
+                    this.audioContext,
+                    'apu-audio-processor',
+                    {
+                        numberOfInputs: 0,
+                        numberOfOutputs: 1,
+                        outputChannelCount: [1], // Mono output
+                    }
+                );
+                
+                // Set up message handler for worklet communication
+                this.workletNode.port.onmessage = (event) => {
+                    this.handleWorkletMessage(event.data);
+                };
+                
+                // Connect worklet to audio context destination (speakers)
+                this.workletNode.connect(this.audioContext.destination);
+                
+                this.workletInitialized = true;
+                console.log('AudioWorklet initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize AudioWorklet:', error);
+                this.workletInitPromise = null; // Allow retry
+                throw error;
+            }
+        })();
+        
+        return this.workletInitPromise;
+    }
+    
+    /**
+     * Handle messages from the AudioWorklet processor
+     *
+     * @param data - Message data from worklet
+     */
+    private handleWorkletMessage(data: any): void {
+        if (data.type === 'buffer-level') {
+            // The worklet reports its buffer fill level periodically
+            // We can use this for dynamic rate control if needed
+            const level = data.level;
+            
+            // Adjust resampler rate based on buffer level
+            // Target 50% fill (0.5), adjust rate to maintain this
+            if (level < 0.3) {
+                // Buffer running low, speed up slightly
+                this.resampler.setRateRatio(1.002);
+            } else if (level > 0.7) {
+                // Buffer getting full, slow down slightly
+                this.resampler.setRateRatio(0.998);
+            } else {
+                // Buffer level good, use normal rate
+                this.resampler.setRateRatio(1.0);
+            }
+        }
+    }
+    
+    /**
+     * Override clock to add audio sample generation
+     */
+    public override clock(): void {
+        // Run the base APU clock logic
+        super.clock();
+        
+        // Only process audio if enabled
+        if (!this.audioEnabled || !this.workletNode) {
+            return;
+        }
+        
+        // Push the current mixed sample to the resampler
+        // The resampler handles rate conversion from APU rate to output rate
+        this.resampler.push(this.currentSample);
+        
+        // Periodically pull samples from resampler and batch them
+        this.sampleCounter++;
+        if (this.sampleCounter >= this.PULL_INTERVAL) {
+            this.sampleCounter = 0;
+            this.pullAndBatchSamples();
+        }
+    }
+    
+    /**
+     * Pull samples from resampler and batch them for sending to worklet
+     */
+    private pullAndBatchSamples(): void {
+        // Get resampled output
+        const samples = this.resampler.pull();
+        
+        if (samples.length === 0) {
+            return;
+        }
+        
+        // Add samples to batch buffer
+        for (let i = 0; i < samples.length; i++) {
+            this.sampleBatchBuffer[this.batchBufferIndex++] = samples[i];
+            
+            // If batch is full, send it to the worklet
+            if (this.batchBufferIndex >= BATCH_SIZE) {
+                this.sendBatchToWorklet();
+            }
+        }
+    }
+    
+    /**
+     * Send the current batch of samples to the AudioWorklet
+     */
+    private sendBatchToWorklet(): void {
+        if (!this.workletNode || this.batchBufferIndex === 0) {
+            return;
+        }
+        
+        // Create a slice of the batch buffer with only valid samples
+        const batch = this.sampleBatchBuffer.slice(0, this.batchBufferIndex);
+        
+        // Send to worklet
+        // Note: We could use transferable objects here for better performance,
+        // but slice() creates a copy which is simpler and works well for our batch size
+        this.workletNode.port.postMessage({
+            type: 'samples',
+            data: batch
+        });
+        
+        // Reset batch buffer
+        this.batchBufferIndex = 0;
+    }
+    
+    /**
+     * Enable audio output
+     *
+     * Initializes the AudioWorklet (if not already done), resumes the AudioContext
+     * if it's suspended (required after user gesture), and starts sending samples
+     * to the audio worklet.
+     */
+    public async enableAudio(): Promise<void> {
+        // Initialize worklet if not already done
+        if (!this.workletInitialized) {
+            try {
+                await this.initializeAudioWorklet();
+            } catch (error) {
+                console.error('Failed to initialize audio worklet:', error);
+                return;
+            }
+        }
+        
+        // Resume AudioContext if it's suspended
+        // Modern browsers require a user gesture to start audio
+        if (this.audioContext.state === 'suspended') {
+            try {
+                await this.audioContext.resume();
+                console.log('AudioContext resumed');
+            } catch (error) {
+                console.error('Failed to resume AudioContext:', error);
+                return;
+            }
+        }
+        
+        this.audioEnabled = true;
+        console.log('Audio output enabled');
+    }
+    
+    /**
+     * Disable audio output
+     *
+     * Stops sending samples to the audio worklet and suspends the AudioContext.
+     */
+    public async disableAudio(): Promise<void> {
+        this.audioEnabled = false;
+        
+        // Flush any remaining samples
+        this.sendBatchToWorklet();
+        
+        // Suspend AudioContext to save resources
+        if (this.audioContext.state === 'running') {
+            try {
+                await this.audioContext.suspend();
+                console.log('AudioContext suspended');
+            } catch (error) {
+                console.error('Failed to suspend AudioContext:', error);
+            }
+        }
+        
+        console.log('Audio output disabled');
+    }
+    
+    /**
+     * Check if audio is currently enabled
+     */
+    public isAudioEnabled(): boolean {
+        return this.audioEnabled;
+    }
+    
+    /**
+     * Get the current AudioContext state
+     */
+    public getAudioContextState(): AudioContextState {
+        return this.audioContext.state;
+    }
+    
+    /**
+     * Override reset to also reset audio state
+     */
+    public override reset(): void {
+        super.reset();
+        
+        // Reset resampler
+        this.resampler.reset();
+        
+        // Clear batch buffer
+        this.batchBufferIndex = 0;
+        this.sampleBatchBuffer.fill(0);
+        this.sampleCounter = 0;
     }
 }

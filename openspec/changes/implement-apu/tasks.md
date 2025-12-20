@@ -170,18 +170,18 @@
 - [ ] 14.8 Write tests for rate control algorithm
 
 ## 15. APU Audio Pipeline Integration (AudioWorklet Only)
-- [ ] 15.1 Refactor `Apu2A03.build()` to detect AudioWorklet support (warn and disable audio if unavailable)
-- [ ] 15.2 Implement `Apu2A03WithWorklet` using AudioWorklet
-- [ ] 15.3 Load AudioWorklet module in browser
-- [ ] 15.4 Create AudioWorkletNode and connect to AudioContext destination
-- [ ] 15.5 Implement sample buffer queue in main thread
-- [ ] 15.6 Implement message passing (main thread → worklet for samples)
-- [ ] 15.7 Implement message passing (worklet → main thread for buffer requests)
-- [ ] 15.8 Batch sample transfers for efficiency
-- [ ] 15.9 Add audio enable/disable controls
-- [ ] 15.10 Handle AudioContext suspended state (user gesture required)
-- [ ] 15.11 Use Web Audio API standard values: 48kHz sample rate default (per MDN documentation)
-- [ ] 15.12 Tune buffer size empirically for optimal latency/stability balance
+- [x] 15.1 Refactor `Apu2A03.build()` to detect AudioWorklet support (warn and disable audio if unavailable)
+- [x] 15.2 Implement `Apu2A03WithWorklet` using AudioWorklet
+- [x] 15.3 Load AudioWorklet module in browser
+- [x] 15.4 Create AudioWorkletNode and connect to AudioContext destination
+- [x] 15.5 Implement sample buffer queue in main thread
+- [x] 15.6 Implement message passing (main thread → worklet for samples)
+- [x] 15.7 Implement message passing (worklet → main thread for buffer requests)
+- [x] 15.8 Batch sample transfers for efficiency
+- [x] 15.9 Add audio enable/disable controls
+- [x] 15.10 Handle AudioContext suspended state (user gesture required)
+- [x] 15.11 Use Web Audio API standard values: 48kHz sample rate default (per MDN documentation)
+- [x] 15.12 Tune buffer size empirically for optimal latency/stability balance
 
 ## 16. NES Layer DMC DMA Integration (Not CPU Layer)
 - [ ] 16.1 Add `dmcStallCycles` counter to `NesEmulator` class (NOT `Cpu6502` - keep CPU platform-agnostic)
