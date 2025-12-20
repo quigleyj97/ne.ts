@@ -148,16 +148,16 @@
 - [x] 11.9 Write unit tests for resampler (verify output sample rate, interpolation quality)
 
 ## 12. AudioWorklet Processor (AudioWorklet Only - No Fallback)
-- [ ] 12.1 Create `src/devices/apu/audio/worklet-processor.ts`
-- [ ] 12.2 Implement `ApuAudioProcessor` class extending `AudioWorkletProcessor`
-- [ ] 12.3 Integrate resampler instance in processor
-- [ ] 12.4 Implement `process()` method to fill output buffer with resampled samples
-- [ ] 12.5 Implement message handler for receiving samples from main thread
-- [ ] 12.6 Implement buffer level monitoring and request-more-samples signaling
-- [ ] 12.7 Register processor with `registerProcessor('apu-audio-processor', ApuAudioProcessor)`
-- [ ] 12.8 Build/bundle worklet processor as separate JavaScript file
-- [ ] 12.9 Write tests for worklet processor (if testable in environment)
-- [ ] 12.10 Log warning and disable audio if AudioWorklet not supported (no fallback implementation)
+- [x] 12.1 Create `src/devices/apu/audio/worklet-processor.ts`
+- [x] 12.2 Implement `ApuAudioProcessor` class extending `AudioWorkletProcessor`
+- [x] 12.3 Integrate resampler instance in processor
+- [x] 12.4 Implement `process()` method to fill output buffer with resampled samples
+- [x] 12.5 Implement message handler for receiving samples from main thread
+- [x] 12.6 Implement buffer level monitoring and request-more-samples signaling
+- [x] 12.7 Register processor with `registerProcessor('apu-audio-processor', ApuAudioProcessor)`
+- [x] 12.8 Build/bundle worklet processor as separate JavaScript file
+- [x] 12.9 Write tests for worklet processor (if testable in environment)
+- [x] 12.10 Log warning and disable audio if AudioWorklet not supported (no fallback implementation)
 
 ## 14. Dynamic Rate Control
 - [ ] 14.1 Create `DynamicRateController` class in resampler or separate file

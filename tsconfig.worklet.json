@@ -1,18 +1,19 @@
 {
     "compilerOptions": {
         "strict": true,
-        "outDir": "lib",
+        "outDir": "lib/worklet",
         "module": "ESNext",
         "target": "ESNext",
         "moduleResolution": "Node",
         "lib": [
-            "ES2018",
-            "DOM"
+            "ESNext"
         ],
         "noFallthroughCasesInSwitch": true,
-        "types": []
+        "types": [
+            "@types/audioworklet"
+        ]
     },
-    "files": [
-        "src/index.ts"
+    "include": [
+        "src/devices/apu/audio/worklet-processor.ts",
     ]
 }
