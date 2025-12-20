@@ -137,15 +137,15 @@
 - [x] 10.7 Write unit tests for mixing formulas with known input/output values
 
 ## 11. Sample Resampler
-- [ ] 11.1 Create `src/devices/apu/audio/resampler.ts`
-- [ ] 11.2 Implement cubic interpolation resampler
-- [ ] 11.3 Add configurable input frequency (APU rate ~894 kHz)
-- [ ] 11.4 Add configurable output frequency (typically 44.1 kHz or 48 kHz)
-- [ ] 11.5 Implement `write(sample: number)` to add APU sample to input buffer
-- [ ] 11.6 Implement `read()` to produce resampled output sample
-- [ ] 11.7 Implement `pending()` to report input buffer fill level
-- [ ] 11.8 Implement `setInputFrequency(hz: number)` for dynamic rate control
-- [ ] 11.9 Write unit tests for resampler (verify output sample rate, interpolation quality)
+- [x] 11.1 Create `src/devices/apu/audio/resampler.ts`
+- [x] 11.2 Implement cubic interpolation resampler
+- [x] 11.3 Add configurable input frequency (APU rate ~894 kHz)
+- [x] 11.4 Add configurable output frequency (typically 44.1 kHz or 48 kHz)
+- [x] 11.5 Implement `write(sample: number)` to add APU sample to input buffer
+- [x] 11.6 Implement `read()` to produce resampled output sample
+- [x] 11.7 Implement `pending()` to report input buffer fill level
+- [x] 11.8 Implement `setInputFrequency(hz: number)` for dynamic rate control
+- [x] 11.9 Write unit tests for resampler (verify output sample rate, interpolation quality)
 
 ## 12. AudioWorklet Processor (AudioWorklet Only - No Fallback)
 - [ ] 12.1 Create `src/devices/apu/audio/worklet-processor.ts`

@@ -5,6 +5,7 @@ import { NoiseChannel } from "./apu/channels/noise.js";
 import { DmcChannel } from "./apu/channels/dmc.js";
 import { FrameCounter } from "./apu/units/frame-counter.js";
 import { ApuMixer } from "./apu/audio/mixer.js";
+import { Resampler } from "./apu/audio/resampler.js";
 
 //#region APU Register Address Constants
 
