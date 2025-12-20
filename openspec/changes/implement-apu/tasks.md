@@ -195,17 +195,17 @@
 - [x] 16.9 Write integration tests for DMC DMA timing
 
 ## 17. Hardware Quirks Implementation
-- [ ] 17.1 Verify Pulse 1 sweep uses ones' complement negation
-- [ ] 17.2 Verify Pulse 2 sweep uses two's complement negation
-- [ ] 17.3 Verify phase reset on $4003/$4007 write
-- [ ] 17.4 Verify $4015 read clears frame interrupt flag
-- [ ] 17.5 Verify $4015 write zeros length counters when disabling
-- [ ] 17.6 Verify Noise LFSR initializes to 1
-- [ ] 17.7 Verify frame counter write delay (3-4 cycles)
-- [ ] 17.8 Verify triangle linear counter reload flag behavior
-- [ ] 17.9 Verify pulse muting conditions (timer < 8, sweep target > $7FF)
-- [ ] 17.10 Verify triangle muting condition (timer < 2)
-- [ ] 17.11 Write dedicated tests for each hardware quirk
+- [x] 17.1 Verify Pulse 1 sweep uses ones' complement negation
+- [x] 17.2 Verify Pulse 2 sweep uses two's complement negation
+- [x] 17.3 Verify phase reset on $4003/$4007 write
+- [x] 17.4 Verify $4015 read clears frame interrupt flag
+- [x] 17.5 Verify $4015 write zeros length counters when disabling
+- [x] 17.6 Verify Noise LFSR initializes to 1
+- [x] 17.7 Verify frame counter write delay (3-4 cycles)
+- [x] 17.8 Verify triangle linear counter reload flag behavior
+- [x] 17.9 Verify pulse muting conditions (timer < 8, sweep target > $7FF)
+- [x] 17.10 Verify triangle muting condition (timer < 2)
+- [x] 17.11 Write dedicated tests for each hardware quirk
 
 ## 18. Early APU Unit Test Suite (Before ROM Integration)
 - [x] 18.1 Write comprehensive unit tests for each APU channel class

@@ -747,4 +747,260 @@ describe('PulseChannel', () => {
             expect(pulse1.isActive()).to.equal(true);
         });
     });
+
+    describe('Hardware Quirks - Section 17 Verification', () => {
+        describe('17.3 - Phase reset on $4003/$4007 write', () => {
+            it('should reset duty position to 0 when writing to $4003 (Pulse 1)', () => {
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF); // Duty 3: [1,1,1,1,1,1,0,0], constant vol 15
+                pulse1.write(2, 0x10); // Timer period > 8 to avoid muting
+                pulse1.write(3, 0x08); // Load length, reset duty position to 0
+                
+                // At position 0, duty 3 outputs 1 (volume 15)
+                expect(pulse1.output()).to.equal(15);
+                
+                // Advance duty position to 6 (outputs 0)
+                for (let i = 0; i < 6; i++) {
+                    for (let j = 0; j <= 0x10; j++) {
+                        pulse1.clockTimer();
+                    }
+                }
+                expect(pulse1.output()).to.equal(0);
+                
+                // Write to $4003 again - should reset position to 0
+                pulse1.write(3, 0x08);
+                
+                // Now back at position 0 (outputs 15)
+                expect(pulse1.output()).to.equal(15);
+            });
+
+            it('should reset duty position to 0 when writing to $4007 (Pulse 2)', () => {
+                pulse2.setEnabled(true);
+                pulse2.write(0, 0xDF); // Duty 3: [1,1,1,1,1,1,0,0], constant vol 15
+                pulse2.write(2, 0x10); // Timer period > 8
+                pulse2.write(3, 0x08); // Load length, reset duty position to 0
+                
+                // At position 0, duty 3 outputs 1 (volume 15)
+                expect(pulse2.output()).to.equal(15);
+                
+                // Advance duty position to 7 (outputs 0)
+                for (let i = 0; i < 7; i++) {
+                    for (let j = 0; j <= 0x10; j++) {
+                        pulse2.clockTimer();
+                    }
+                }
+                expect(pulse2.output()).to.equal(0);
+                
+                // Write to $4007 again - should reset position to 0
+                pulse2.write(3, 0x08);
+                
+                // Now back at position 0 (outputs 15)
+                expect(pulse2.output()).to.equal(15);
+            });
+
+            it('should reset duty position regardless of which bits are written', () => {
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0x5F); // Duty 1: [0,0,0,0,0,0,1,1], constant vol 15
+                pulse1.write(2, 0x10);
+                pulse1.write(3, 0x00); // Load length index 0, reset position
+                
+                // Position 0 of duty 1 is 0 (outputs 0)
+                expect(pulse1.output()).to.equal(0);
+                
+                // Advance to position 6 (outputs 15)
+                for (let i = 0; i < 6; i++) {
+                    for (let j = 0; j <= 0x10; j++) {
+                        pulse1.clockTimer();
+                    }
+                }
+                expect(pulse1.output()).to.equal(15);
+                
+                // Write different timer high bits - should still reset position
+                pulse1.write(3, 0xF8); // Different length and timer values
+                
+                // Back at position 0 (outputs 0)
+                expect(pulse1.output()).to.equal(0);
+            });
+
+            it('should reset duty position even mid-sequence', () => {
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0x9F); // Duty 2: [0,0,0,0,1,1,1,1], constant vol 15
+                pulse1.write(2, 0x10);
+                pulse1.write(3, 0x08); // Reset to position 0
+                
+                // Position 0 outputs 0
+                expect(pulse1.output()).to.equal(0);
+                
+                // Advance to position 4 (outputs 15)
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j <= 0x10; j++) {
+                        pulse1.clockTimer();
+                    }
+                }
+                expect(pulse1.output()).to.equal(15);
+                
+                // Advance to position 5 (still outputs 15)
+                for (let j = 0; j <= 0x10; j++) {
+                    pulse1.clockTimer();
+                }
+                expect(pulse1.output()).to.equal(15);
+                
+                // Write register 3 - resets back to position 0
+                pulse1.write(3, 0x08);
+                expect(pulse1.output()).to.equal(0);
+            });
+
+            it('should occur on every write to register 3', () => {
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF); // Duty 3, constant vol 15
+                pulse1.write(2, 0x10);
+                
+                // First write resets to 0
+                pulse1.write(3, 0x08);
+                expect(pulse1.output()).to.equal(15); // Position 0 of duty 3
+                
+                // Advance duty position
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j <= 0x10; j++) {
+                        pulse1.clockTimer();
+                    }
+                }
+                
+                // Second write resets to 0 again
+                pulse1.write(3, 0x08);
+                expect(pulse1.output()).to.equal(15);
+                
+                // Advance again
+                for (let i = 0; i < 5; i++) {
+                    for (let j = 0; j <= 0x10; j++) {
+                        pulse1.clockTimer();
+                    }
+                }
+                
+                // Third write resets to 0 again
+                pulse1.write(3, 0x08);
+                expect(pulse1.output()).to.equal(15);
+            });
+        });
+
+        describe('17.9 - Pulse muting conditions (timer < 8, sweep target > $7FF)', () => {
+            it('should mute when timer period < 8', () => {
+                // Hardware quirk: Pulse is muted when timer period < 8
+                // This prevents ultrasonic frequencies
+                // Verified in implementation at pulse.ts line 258 and sweep.ts line 150
+                
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF); // Duty 3 (75%), constant volume 15 - duty 3 outputs 1 at position 0
+                pulse1.write(3, 0x08); // Load length counter
+                
+                // Set timer period < 8
+                for (let period = 0; period < 8; period++) {
+                    pulse1.write(2, period); // Timer low
+                    pulse1.write(3, 0x08); // Timer high = 0
+                    
+                    // Should be muted
+                    expect(pulse1.output()).to.equal(0, `Muted when period = ${period}`);
+                }
+            });
+
+            it('should NOT mute when timer period = 8', () => {
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF); // Duty 3, constant volume 15
+                pulse1.write(2, 0x08); // Timer low = 8
+                pulse1.write(3, 0x08); // Timer high = 0, load length
+                
+                // Should not be muted (period = 8, at the threshold)
+                expect(pulse1.output()).to.not.equal(0, 'Not muted when period = 8');
+            });
+
+            it('should NOT mute when timer period > 8', () => {
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF);
+                pulse1.write(2, 0xFF); // Timer low = 255
+                pulse1.write(3, 0x08); // Timer high = 0
+                
+                // Should not be muted
+                expect(pulse1.output()).to.not.equal(0, 'Not muted when period > 8');
+            });
+
+            it('should mute when sweep target period > $7FF', () => {
+                // Pulse is also muted when sweep target period would overflow (> $7FF = 2047)
+                // Verified in implementation at sweep.ts lines 155-156
+                
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF); // Constant volume 15
+                pulse1.write(1, 0x08); // Sweep: shift = 0, negate = 1 (disabled but still checked)
+                pulse1.write(2, 0xFF); // Timer low = 0xFF
+                pulse1.write(3, (0x07 << 3) | 0x07); // Timer high =0x7, load length
+                // Period = 0x7FF (2047) - at the edge
+                
+                // Not muted yet
+                expect(pulse1.output()).to.not.equal(0);
+                
+                // Set period to 0x7FF with shift that would overflow
+                pulse1.write(1, 0x01); // Sweep: shift = 1, negate = 0 (add mode)
+                // Target = 0x7FF + (0x7FF >> 1) = 0x7FF + 0x3FF = 0xBFE (> 0x7FF)
+                
+                // Should be muted due to sweep target overflow
+                expect(pulse1.output()).to.equal(0, 'Muted when sweep target > $7FF');
+            });
+
+            it('should mute when current period < 8 even if sweep is disabled', () => {
+                // Muting is checked regardless of sweep enable
+                
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF);
+                pulse1.write(1, 0x00); // Sweep disabled
+                pulse1.write(2, 0x05); // Period = 5 (< 8)
+                pulse1.write(3, 0x08);
+                
+                // Muted despite sweep being disabled
+                expect(pulse1.output()).to.equal(0);
+            });
+
+            it('should check both muting conditions independently', () => {
+                // Both conditions should be checked
+                
+                pulse1.setEnabled(true);
+                pulse1.write(0, 0xDF);
+                
+                // Condition 1: period < 8 (TRUE) - muted
+                pulse1.write(1, 0x00);
+                pulse1.write(2, 0x05);
+                pulse1.write(3, 0x08);
+                expect(pulse1.output()).to.equal(0, 'Muted by period < 8');
+                
+                // Fix period, but create sweep overflow
+                pulse1.write(1, 0x01); // Shift = 1, add mode
+                pulse1.write(2, 0xFF);
+                pulse1.write(3, (0x07 << 3) | 0x07); // Period = 0x7FF
+                // Target = 0x7FF + 0x3FF = overflow
+                expect(pulse1.output()).to.equal(0, 'Muted by sweep overflow');
+                
+                // Fix both conditions
+                pulse1.write(1, 0x00); // Disable sweep
+                pulse1.write(2, 0x10); // Period = 16 (valid)
+                pulse1.write(3, 0x08);
+                expect(pulse1.output()).to.not.equal(0, 'Not muted when both conditions false');
+            });
+
+            it('should work correctly for Pulse 2 channel as well', () => {
+                // Pulse 2 has the same muting conditions
+                
+                const pulse2 = new PulseChannel(2);
+                pulse2.setEnabled(true);
+                pulse2.write(0, 0xDF);
+                
+                // Test period < 8
+                pulse2.write(2, 0x03);
+                pulse2.write(3, 0x08);
+                expect(pulse2.output()).to.equal(0, 'Pulse 2 muted when period < 8');
+                
+                // Test valid period
+                pulse2.write(2, 0x10);
+                pulse2.write(3, 0x08);
+                expect(pulse2.output()).to.not.equal(0, 'Pulse 2 not muted when period >= 8');
+            });
+        });
+    });
 });

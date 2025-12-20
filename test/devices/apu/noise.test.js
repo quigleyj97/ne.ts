@@ -890,4 +890,165 @@ describe('NoiseChannel', () => {
             expect(noise.isActive()).to.equal(false);
         });
     });
+
+    describe('Hardware Quirks - Section 17 Verification', () => {
+        describe('17.6 - LFSR initializes to 1 (not 0)', () => {
+            it('should initialize LFSR shift register to 1 on construction', () => {
+                // Critical hardware quirk: LFSR MUST initialize to 1, not 0
+                // If initialized to 0, the LFSR would stay at 0 forever (producing only silence)
+                // This is verified in the implementation at noise.ts line 64: private shiftRegister: u16 = 1;
+                
+                const noise = new NoiseChannel();
+                
+                // Even without enabling or loading, noise should produce non-zero output
+                // when LFSR bit 0 is 0 (which will happen since LFSR != 0)
+                noise.setEnabled(true);
+                noise.write(0, 0x1F); // Constant volume 15
+                noise.write(2, 0x00); // Period = 4 (shortest)
+                noise.write(3, 0x08); // Load length counter
+                
+                // Clock timer to shift LFSR
+                let foundNonZero = false;
+                for (let i = 0; i < 100; i++) {
+                    noise.clockTimer();
+                    const output = noise.getOutput();
+                    if (output !== 0) {
+                        foundNonZero = true;
+                        break;
+                    }
+                }
+                
+                // Should find non-zero output (LFSR produces varying values)
+                expect(foundNonZero).to.equal(true);
+            });
+
+            it('should reset LFSR to 1 on reset()', () => {
+                // The reset() method should also initialize LFSR to 1
+                // Verified in implementation at noise.ts line 306: this.shiftRegister = 1;
+                
+                const noise = new NoiseChannel();
+                noise.setEnabled(true);
+                noise.write(0, 0x1F); // Constant volume
+                noise.write(2, 0x00); // Short period
+                noise.write(3, 0x08); // Load length
+                
+                // Clock many times to change LFSR state
+                for (let i = 0; i < 1000; i++) {
+                    noise.clockTimer();
+                }
+                
+                // Reset
+                noise.reset();
+                
+                // Re-enable and configure
+                noise.setEnabled(true);
+                noise.write(0, 0x1F);
+                noise.write(2, 0x00);
+                noise.write(3, 0x08);
+                
+                // Should still produce output (LFSR = 1, not 0)
+                let foundNonZero = false;
+                for (let i = 0; i < 100; i++) {
+                    noise.clockTimer();
+                    if (noise.getOutput() !== 0) {
+                        foundNonZero = true;
+                        break;
+                    }
+                }
+                
+                expect(foundNonZero).to.equal(true);
+            });
+
+            it('should never get stuck at LFSR = 0 (which would silence forever)', () => {
+                // This tests the critical aspect: LFSR = 0 would break the noise channel
+                // The implementation prevents this by initializing to 1
+                
+                const noise = new NoiseChannel();
+                noise.setEnabled(true);
+                noise.write(0, 0x1F); // Max volume
+                noise.write(2, 0x00); // Fastest period
+                noise.write(3, 0x08); // Load length
+                
+                // Collect many output samples
+                const samples = [];
+                for (let i = 0; i < 10000; i++) {
+                    noise.clockTimer();
+                    samples.push(noise.getOutput());
+                }
+                
+                // Should have variation in output (not all zeros)
+                const hasNonZero = samples.some(s => s !== 0);
+                const hasZero = samples.some(s => s === 0);
+                
+                // With LFSR properly initialized, we should see both 0 and non-zero values
+                // (because LFSR bit 0 varies, creating the noise effect)
+                expect(hasNonZero).to.equal(true);
+                expect(hasZero).to.equal(true);
+            });
+
+            it('should produce pseudo-random sequence due to non-zero LFSR initialization', () => {
+                // The LFSR feedback loop only works if initial value is non-zero
+                // This creates the characteristic noise sound
+                
+                const noise = new NoiseChannel();
+                noise.setEnabled(true);
+                noise.write(0, 0x1F); // Constant volume 15
+                noise.write(2, 0x00); // Period = 4 (faster, more samples)
+                noise.write(3, 0x08); // Load length
+                
+                // Sample outputs as LFSR shifts
+                const outputs = [];
+                for (let i = 0; i < 200; i++) {
+                    noise.clockTimer();
+                    outputs.push(noise.getOutput());
+                }
+                
+                // Should see variation (pseudo-random due to LFSR)
+                const uniqueValues = new Set(outputs);
+                
+                // Should have at least 2 different values (0 and 15 based on LFSR bit 0)
+                expect(uniqueValues.size).to.be.at.least(2);
+            });
+
+            it('should work in both long mode and short mode with LFSR = 1', () => {
+                // Both LFSR modes (long/short) depend on proper initialization
+                
+                const noise = new NoiseChannel();
+                noise.setEnabled(true);
+                noise.write(0, 0x1F); // Constant volume
+                noise.write(3, 0x08); // Load length
+                
+                // Test long mode (mode bit = 0)
+                noise.write(2, 0x00); // Period = 4, long mode
+                let foundNonZeroLong = false;
+                for (let i = 0; i < 100; i++) {
+                    noise.clockTimer();
+                    if (noise.getOutput() !== 0) {
+                        foundNonZeroLong = true;
+                        break;
+                    }
+                }
+                
+                // Test short mode (mode bit = 1)
+                noise.reset();
+                noise.setEnabled(true);
+                noise.write(0, 0x1F);
+                noise.write(2, 0x80); // Period = 4, short mode (bit 7 set)
+                noise.write(3, 0x08);
+                
+                let foundNonZeroShort = false;
+                for (let i = 0; i < 100; i++) {
+                    noise.clockTimer();
+                    if (noise.getOutput() !== 0) {
+                        foundNonZeroShort = true;
+                        break;
+                    }
+                }
+                
+                // Both modes should work (produce non-zero output)
+                expect(foundNonZeroLong).to.equal(true);
+                expect(foundNonZeroShort).to.equal(true);
+            });
+        });
+    });
 });

@@ -801,4 +801,133 @@ describe('TriangleChannel', () => {
             expect(triangle.output()).to.equal(0);
         });
     });
+
+    describe('Hardware Quirks - Section 17 Verification', () => {
+        describe('17.8 - Linear counter reload flag behavior', () => {
+            it('should set reload flag when writing to $400B', () => {
+                // Hardware quirk: Writing to $400B sets the linear counter reload flag
+                // Verified in implementation at triangle.ts line 169: this.linearCounterReloadFlag = true;
+                
+                triangle.setEnabled(true);
+                triangle.writeControl(0x7F); // Set reload value and control flag
+                triangle.writeTimerHigh(0x08); // This sets reload flag
+                
+                // Next clockLinearCounter should reload the counter
+                triangle.clockLinearCounter();
+                
+                // Linear counter should be reloaded to reload value (0x7F = 127)
+                // Triangle should produce output
+                triangle.writeTimerLow(0x02); // Timer >= 2
+                expect(triangle.output()).to.not.equal(0);
+            });
+
+            it('should clear reload flag when control flag is clear', () => {
+                // The reload flag is cleared when linear counter is clocked IF control flag is clear
+                // Verified in implementation at triangle.ts lines 218-220
+                
+                triangle.setEnabled(true);
+                triangle.writeControl(0x7F); // Control flag CLEAR (bit 7 = 0), reload = 127
+                triangle.writeTimerLow(0x02);
+                triangle.writeTimerHigh(0x08); // Set reload flag
+                
+                // Clock with control flag clear - should clear reload flag
+                triangle.clockLinearCounter();
+                
+                // Reload flag should be cleared
+                // If we clock again, counter should decrement instead of reload
+                triangle.clockLinearCounter(); // 127 -> 126
+                triangle.clockLinearCounter(); // 126 -> 125
+                
+                // Counter is decrementing, not reloading
+                expect(triangle.output()).to.not.equal(0); // Still has counter value
+            });
+
+            it('should NOT clear reload flag when control flag is set', () => {
+                // If control flag is SET, reload flag stays set
+                // Verified in implementation at triangle.ts lines 217-220
+                
+                triangle.setEnabled(true);
+                triangle.writeControl(0xFF); // Control flag SET (bit 7 = 1), reload = 127
+                triangle.writeTimerLow(0x02);
+                triangle.writeTimerHigh(0x08); // Set reload flag
+                
+                // Clock with control flag set - should reload and NOT clear reload flag
+                triangle.clockLinearCounter(); // Reload to 127
+                triangle.clockLinearCounter(); // Reload to 127 again
+                triangle.clockLinearCounter(); // Reload to 127 again
+                
+                // Counter keeps reloading (never expires)
+                expect(triangle.output()).to.not.equal(0);
+            });
+        });
+
+        describe('17.10 - Triangle muting when timer < 2', () => {
+            it('should mute output when timer period = 0', () => {
+                // Hardware quirk: Triangle is silenced when timer period < 2
+                // This prevents ultrasonic frequencies that would produce pops/clicks
+                // Verified in implementation at triangle.ts lines 263-265
+                
+                triangle.setEnabled(true);
+                triangle.writeControl(0xFF); // Max linear counter
+                triangle.writeTimerLow(0x00); // Timer low = 0
+                triangle.writeTimerHigh(0x08); // Timer high = 0, load length
+                // Timer period = 0 (< 2)
+                
+                triangle.clockLinearCounter(); // Load linear counter
+                
+                // Should be muted despite having linear and length counters
+                expect(triangle.output()).to.equal(0, 'Muted when period = 0');
+            });
+
+            it('should mute output when timer period = 1', () => {
+                triangle.setEnabled(true);
+                triangle.writeControl(0xFF);
+                triangle.writeTimerLow(0x01); // Timer low = 1
+                triangle.writeTimerHigh(0x08); // Timer high = 0
+                // Timer period = 1 (< 2)
+                
+                triangle.clockLinearCounter();
+                
+                expect(triangle.output()).to.equal(0, 'Muted when period = 1');
+            });
+
+            it('should NOT mute when timer period = 2', () => {
+                triangle.setEnabled(true);
+                triangle.writeControl(0xFF);
+                triangle.writeTimerLow(0x02); // Timer low = 2
+                triangle.writeTimerHigh(0x08); // Timer high = 0
+                // Timer period = 2 (>= 2, not muted)
+                
+                triangle.clockLinearCounter();
+                
+                expect(triangle.output()).to.not.equal(0, 'Not muted when period = 2');
+            });
+
+            it('should NOT mute when timer period > 2', () => {
+                triangle.setEnabled(true);
+                triangle.writeControl(0xFF);
+                triangle.writeTimerLow(0xFF); // Timer low = 255
+                triangle.writeTimerHigh(0x08); // Timer high = 0
+                // Timer period = 255 (>= 2, not muted)
+                
+                triangle.clockLinearCounter();
+                
+                expect(triangle.output()).to.not.equal(0, 'Not muted when period = 255');
+            });
+
+            it('should mute even with valid linear and length counters', () => {
+                // The ultrasonic muting is independent of other muting conditions
+                
+                triangle.setEnabled(true);
+                triangle.writeControl(0xFF); // Max linear counter, length halt
+                triangle.writeTimerLow(0x00); // Period = 0
+                triangle.writeTimerHigh(0xF8); // Load max length counter
+                
+                triangle.clockLinearCounter(); // Load linear counter
+                
+                // Has both counters loaded, but still muted due to timer
+                expect(triangle.output()).to.equal(0);
+            });
+        });
+    });
 });

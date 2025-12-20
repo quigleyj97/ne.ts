@@ -731,4 +731,128 @@ describe('SweepUnit', () => {
             expect(result).to.equal(5);
         });
     });
+
+    describe('Hardware Quirks - Section 17 Verification', () => {
+        describe('17.1 - Pulse 1 uses ones\' complement negation', () => {
+            /** @type {import('../../../src/devices/apu/units/sweep').SweepUnit} */
+            let pulse1;
+
+            beforeEach(() => {
+                pulse1 = new SweepUnit(1);
+            });
+
+            it('should use ones\' complement: target = period - change', () => {
+                pulse1.setRegister(0x89); // Enable, negate ON, shift 1
+                const result = pulse1.clock(100);
+                
+                // Ones' complement: 100 - (100 >> 1) = 100 - 50 = 50
+                expect(result).to.equal(50);
+            });
+
+            it('should verify with multiple period values', () => {
+                pulse1.setRegister(0x89); // Enable, negate ON, shift 1
+                
+                expect(pulse1.clock(200)).to.equal(100); // 200 - 100 = 100
+                expect(pulse1.clock(1000)).to.equal(500); // 1000 - 500 = 500
+                expect(pulse1.clock(256)).to.equal(128); // 256 - 128 = 128
+            });
+
+            it('should verify with different shift values', () => {
+                // Shift 2: change = period >> 2
+                pulse1.setRegister(0x8A); // Enable, negate ON, shift 2
+                expect(pulse1.clock(100)).to.equal(75); // 100 - 25 = 75
+
+                // Shift 3: change = period >> 3
+                pulse1.setRegister(0x8B); // Enable, negate ON, shift 3
+                expect(pulse1.clock(100)).to.equal(88); // 100 - 12 = 88
+            });
+        });
+
+        describe('17.2 - Pulse 2 uses twos\' complement negation', () => {
+            /** @type {import('../../../src/devices/apu/units/sweep').SweepUnit} */
+            let pulse2;
+
+            beforeEach(() => {
+                pulse2 = new SweepUnit(2);
+            });
+
+            it('should use twos\' complement: target = period - change - 1', () => {
+                pulse2.setRegister(0x89); // Enable, negate ON, shift 1
+                const result = pulse2.clock(100);
+                
+                // Twos' complement: 100 - (100 >> 1) - 1 = 100 - 50 - 1 = 49
+                expect(result).to.equal(49);
+            });
+
+            it('should verify with multiple period values', () => {
+                pulse2.setRegister(0x89); // Enable, negate ON, shift 1
+                
+                expect(pulse2.clock(200)).to.equal(99); // 200 - 100 - 1 = 99
+                expect(pulse2.clock(1000)).to.equal(499); // 1000 - 500 - 1 = 499
+                expect(pulse2.clock(256)).to.equal(127); // 256 - 128 - 1 = 127
+            });
+
+            it('should verify with different shift values', () => {
+                // Shift 2: change = period >> 2
+                pulse2.setRegister(0x8A); // Enable, negate ON, shift 2
+                expect(pulse2.clock(100)).to.equal(74); // 100 - 25 - 1 = 74
+
+                // Shift 3: change = period >> 3
+                pulse2.setRegister(0x8B); // Enable, negate ON, shift 3
+                expect(pulse2.clock(100)).to.equal(87); // 100 - 12 - 1 = 87
+            });
+        });
+
+        describe('Comparison - Pulse 1 vs Pulse 2 negation difference', () => {
+            /** @type {import('../../../src/devices/apu/units/sweep').SweepUnit} */
+            let pulse1;
+            /** @type {import('../../../src/devices/apu/units/sweep').SweepUnit} */
+            let pulse2;
+
+            beforeEach(() => {
+                pulse1 = new SweepUnit(1);
+                pulse2 = new SweepUnit(2);
+            });
+
+            it('should produce different results with same configuration', () => {
+                pulse1.setRegister(0x89); // Enable, negate ON, shift 1
+                pulse2.setRegister(0x89);
+
+                const result1 = pulse1.clock(100);
+                const result2 = pulse2.clock(100);
+
+                // Pulse 1: 100 - 50 = 50
+                // Pulse 2: 100 - 50 - 1 = 49
+                expect(result1).to.equal(50);
+                expect(result2).to.equal(49);
+                expect(result1).to.not.equal(result2);
+            });
+
+            it('should differ by exactly 1 when negating', () => {
+                pulse1.setRegister(0x89);
+                pulse2.setRegister(0x89);
+
+                const testCases = [100, 200, 500, 1000, 1500];
+                for (const period of testCases) {
+                    const result1 = pulse1.clock(period);
+                    const result2 = pulse2.clock(period);
+                    
+                    expect(result1 - result2).to.equal(1, `Period ${period}: Pulse 1 should be 1 higher than Pulse 2`);
+                }
+            });
+
+            it('should produce identical results when NOT negating', () => {
+                pulse1.setRegister(0x81); // Enable, negate OFF, shift 1
+                pulse2.setRegister(0x81);
+
+                const result1 = pulse1.clock(100);
+                const result2 = pulse2.clock(100);
+
+                // Both: 100 + 50 = 150
+                expect(result1).to.equal(150);
+                expect(result2).to.equal(150);
+                expect(result1).to.equal(result2);
+            });
+        });
+    });
 });
