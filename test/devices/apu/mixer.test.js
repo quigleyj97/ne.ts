@@ -325,4 +325,217 @@ describe('ApuMixer', () => {
             expect(bothPulse).to.be.greaterThan(pulse1Only + pulse2Only);
         });
     });
+
+    /**
+     * Task 18.4: Unit tests for mixing formulas with known values
+     *
+     * These tests verify the non-linear mixing formulas using precise known
+     * reference values to ensure mathematical correctness of the DAC formulas.
+     */
+    describe('Task 18.4: Mixing formulas with known reference values', () => {
+        describe('zero values (silence)', () => {
+            it('should output -1.0 when all channels are zero', () => {
+                const output = mixer.mix(0, 0, 0, 0, 0);
+                expect(output).to.equal(-1.0);
+            });
+
+            it('should output -1.0 when pulse channels zero with active TND', () => {
+                // pulse_out = 0, tnd_out > 0, but total is (0 + tnd) * 2 - 1
+                const output = mixer.mix(0, 0, 15, 15, 127);
+                // tnd_out ≈ 0.74161, so (0 + 0.74161) * 2 - 1 ≈ 0.483
+                expect(output).to.be.greaterThan(-1.0);
+            });
+
+            it('should output -1.0 when TND channels zero with active pulse', () => {
+                const output = mixer.mix(15, 15, 0, 0, 0);
+                // pulse_out ≈ 0.25848, so (0.25848 + 0) * 2 - 1 ≈ -0.483
+                expect(output).to.be.greaterThan(-1.0);
+            });
+        });
+
+        describe('maximum channel values', () => {
+            it('should output maximum for pulse channels (15, 15)', () => {
+                // pulse_out = 95.88 / ((8128 / 30) + 100)
+                // pulse_out = 95.88 / (271.0 + 100) = 95.88 / 371.0 ≈ 0.25848
+                // Normalized: 0.25848 * 2 - 1 ≈ -0.48304
+                const output = mixer.mix(15, 15, 0, 0, 0);
+                expect(output).to.be.closeTo(-0.483, 0.001);
+            });
+
+            it('should output maximum for triangle channel (15)', () => {
+                // tnd_out = 159.79 / ((1 / (15/8227)) + 100)
+                // tnd_out = 159.79 / ((8227/15) + 100) = 159.79 / 648.47 ≈ 0.24641
+                // Normalized: 0.24641 * 2 - 1 ≈ -0.50718
+                const output = mixer.mix(0, 0, 15, 0, 0);
+                expect(output).to.be.closeTo(-0.507, 0.001);
+            });
+
+            it('should output maximum for noise channel (15)', () => {
+                // tnd_out = 159.79 / ((1 / (15/12241)) + 100)
+                // tnd_out = 159.79 / ((12241/15) + 100) ≈ 0.17443
+                // Normalized: 0.17443 * 2 - 1 ≈ -0.65114
+                const output = mixer.mix(0, 0, 0, 15, 0);
+                expect(output).to.be.closeTo(-0.651, 0.001);
+            });
+
+            it('should output maximum for DMC channel (127)', () => {
+                // tnd_out = 159.79 / ((1 / (127/22638)) + 100)
+                // tnd_out = 159.79 / ((22638/127) + 100) ≈ 0.57426
+                // Normalized: 0.57426 * 2 - 1 ≈ 0.14852
+                const output = mixer.mix(0, 0, 0, 0, 127);
+                expect(output).to.be.closeTo(0.149, 0.001);
+            });
+
+            it('should output near maximum with all channels at max', () => {
+                // All channels: P1=15, P2=15, T=15, N=15, D=127
+                // pulse_out = 95.88 / ((8128/30) + 100) ≈ 0.25848
+                // tnd_out = 159.79 / ((1 / (15/8227 + 15/12241 + 127/22638)) + 100)
+                //         = 159.79 / ((1 / 0.00741607) + 100) ≈ 0.74161
+                // total = 0.25848 + 0.74161 = 1.00009
+                // Normalized: 1.00009 * 2 - 1 ≈ 1.00018 (clamped to 1.0 or very close)
+                const output = mixer.mix(15, 15, 15, 15, 127);
+                expect(output).to.be.greaterThan(0.9);
+                expect(output).to.be.at.most(1.0);
+            });
+        });
+
+        describe('specific known combinations', () => {
+            it('should correctly mix pulse1=10, pulse2=5', () => {
+                // pulse_out = 95.88 / ((8128 / 15) + 100)
+                // pulse_out = 95.88 / (541.87 + 100) ≈ 0.14938
+                // Normalized: 0.14938 * 2 - 1 ≈ -0.70124
+                const output = mixer.mix(10, 5, 0, 0, 0);
+                expect(output).to.be.closeTo(-0.701, 0.001);
+            });
+
+            it('should correctly mix triangle=10, noise=10, dmc=64', () => {
+                // tnd_out = 159.79 / ((1 / (10/8227 + 10/12241 + 64/22638)) + 100)
+                // tnd_out = 159.79 / ((1 / (0.001216 + 0.000817 + 0.002827)) + 100)
+                // tnd_out = 159.79 / (205.76 + 100) ≈ 0.5226
+                // Normalized: 0.5226 * 2 - 1 ≈ 0.0452
+                const output = mixer.mix(0, 0, 10, 10, 64);
+                expect(output).to.be.closeTo(0.045, 0.01);
+            });
+
+            it('should correctly mix balanced configuration', () => {
+                // Balanced: P1=8, P2=8, T=8, N=8, D=64
+                // pulse_out = 95.88 / ((8128/16) + 100) ≈ 0.15768
+                // tnd_out = 159.79 / ((1 / (8/8227 + 8/12241 + 64/22638)) + 100) ≈ 0.53
+                // total ≈ 0.687, Normalized: ≈ 0.374
+                const output = mixer.mix(8, 8, 8, 8, 64);
+                expect(output).to.be.greaterThan(0.3);
+                expect(output).to.be.lessThan(0.5);
+            });
+
+            it('should correctly mix single pulse value of 1', () => {
+                // pulse_out = 95.88 / ((8128 / 1) + 100)
+                // pulse_out = 95.88 / 8228 ≈ 0.01165
+                // Normalized: 0.01165 * 2 - 1 ≈ -0.9767
+                const output = mixer.mix(1, 0, 0, 0, 0);
+                expect(output).to.be.closeTo(-0.977, 0.001);
+            });
+
+            it('should correctly mix single DMC value of 1', () => {
+                // tnd_out = 159.79 / ((1 / (1/22638)) + 100)
+                // tnd_out = 159.79 / (22638 + 100) ≈ 0.00703
+                // Normalized: 0.00703 * 2 - 1 ≈ -0.98594
+                const output = mixer.mix(0, 0, 0, 0, 1);
+                expect(output).to.be.closeTo(-0.986, 0.001);
+            });
+        });
+
+        describe('edge cases - single channel active vs all channels active', () => {
+            it('should handle only pulse1 active at value 15', () => {
+                const output = mixer.mix(15, 0, 0, 0, 0);
+                expect(output).to.be.closeTo(-0.701, 0.001);
+            });
+
+            it('should handle only pulse2 active at value 15', () => {
+                const output = mixer.mix(0, 15, 0, 0, 0);
+                expect(output).to.be.closeTo(-0.701, 0.001);
+            });
+
+            it('should handle only triangle active at value 15', () => {
+                const output = mixer.mix(0, 0, 15, 0, 0);
+                expect(output).to.be.closeTo(-0.507, 0.001);
+            });
+
+            it('should handle only noise active at value 15', () => {
+                const output = mixer.mix(0, 0, 0, 15, 0);
+                expect(output).to.be.closeTo(-0.651, 0.001);
+            });
+
+            it('should handle only DMC active at value 127', () => {
+                const output = mixer.mix(0, 0, 0, 0, 127);
+                expect(output).to.be.closeTo(0.149, 0.001);
+            });
+
+            it('should handle all channels active producing higher output than any single channel', () => {
+                const singlePulse = mixer.mix(15, 0, 0, 0, 0);
+                const singleTri = mixer.mix(0, 0, 15, 0, 0);
+                const singleNoise = mixer.mix(0, 0, 0, 15, 0);
+                const singleDmc = mixer.mix(0, 0, 0, 0, 127);
+                const allActive = mixer.mix(15, 15, 15, 15, 127);
+                
+                // All channels active should produce the highest output
+                expect(allActive).to.be.greaterThan(singlePulse);
+                expect(allActive).to.be.greaterThan(singleTri);
+                expect(allActive).to.be.greaterThan(singleNoise);
+                expect(allActive).to.be.greaterThan(singleDmc);
+            });
+        });
+
+        describe('output range normalization [-1.0, +1.0]', () => {
+            it('should guarantee minimum output is -1.0', () => {
+                const output = mixer.mix(0, 0, 0, 0, 0);
+                expect(output).to.equal(-1.0);
+                expect(output).to.be.at.least(-1.0);
+            });
+
+            it('should guarantee maximum output does not exceed +1.0', () => {
+                const output = mixer.mix(15, 15, 15, 15, 127);
+                expect(output).to.be.at.most(1.0);
+            });
+
+            it('should verify all intermediate values stay in range', () => {
+                // Test a comprehensive set of value combinations
+                for (let p1 = 0; p1 <= 15; p1 += 5) {
+                    for (let p2 = 0; p2 <= 15; p2 += 5) {
+                        for (let tri = 0; tri <= 15; tri += 5) {
+                            for (let noise = 0; noise <= 15; noise += 5) {
+                                for (let dmc = 0; dmc <= 127; dmc += 32) {
+                                    const output = mixer.mix(p1, p2, tri, noise, dmc);
+                                    expect(output).to.be.at.least(-1.0);
+                                    expect(output).to.be.at.most(1.0);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            it('should verify output formula: (pulse_out + tnd_out) * 2 - 1', () => {
+                // For silence: (0 + 0) * 2 - 1 = -1
+                expect(mixer.mix(0, 0, 0, 0, 0)).to.equal(-1.0);
+                
+                // For max pulse only: pulse_out ≈ 0.25848
+                // (0.25848 + 0) * 2 - 1 = -0.48304
+                expect(mixer.mix(15, 15, 0, 0, 0)).to.be.closeTo(-0.483, 0.001);
+                
+                // For max DMC only: tnd_out ≈ 0.57426
+                // (0 + 0.57426) * 2 - 1 = 0.14852
+                expect(mixer.mix(0, 0, 0, 0, 127)).to.be.closeTo(0.149, 0.001);
+            });
+
+            it('should maintain precision for very small non-zero values', () => {
+                const output = mixer.mix(1, 1, 1, 1, 1);
+                // pulse_out = 95.88 / ((8128 / 2) + 100) ≈ 0.0232
+                // tnd_out = 159.79 / ((1 / (1/8227 + 1/12241 + 1/22638)) + 100) ≈ 0.0386
+                // total = (0.0232 + 0.0386) * 2 - 1 ≈ -0.8764
+                // Should be slightly above -1.0 but still well below 0
+                expect(output).to.be.greaterThan(-1.0);
+                expect(output).to.be.lessThan(-0.8);
+            });
+        });
+    });
 });

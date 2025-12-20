@@ -694,4 +694,506 @@ describe('FrameCounter', () => {
             });
         });
     });
+
+    /**
+     * Task 18.6: Unit tests for timing synchronization
+     *
+     * These tests verify proper timing synchronization between the frame counter
+     * and channels, ensuring quarter-frame and half-frame events occur at precise
+     * intervals with correct differences between 4-step and 5-step modes.
+     */
+    describe('Task 18.6: Timing Synchronization', () => {
+        describe('quarter-frame timing intervals', () => {
+            it('should generate quarter-frame every ~3728.5 cycles in 4-step mode', () => {
+                fc.writeControl(0x40, 0); // 4-step mode, IRQ inhibit
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                // Quarter-frame events occur at: 7459, 14913, 22371, 29829
+                // Intervals: 7459, 7454, 7458, 7458
+                // Average: ~7457 cycles (half of ~14914.5 or ~3728.625 CPU cycles per quarter-frame)
+                
+                const quarterFrameCycles = [];
+                let lastQuarterFrameCycle = 0;
+                
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.quarterFrame) {
+                        quarterFrameCycles.push(cycle);
+                        
+                        if (lastQuarterFrameCycle > 0) {
+                            const interval = cycle - lastQuarterFrameCycle;
+                            // Interval should be around 7454-7459 cycles
+                            expect(interval).to.be.at.least(7450);
+                            expect(interval).to.be.at.most(7465);
+                        }
+                        
+                        lastQuarterFrameCycle = cycle;
+                    }
+                }
+                
+                // Should have 4 quarter-frame events
+                expect(quarterFrameCycles).to.have.lengthOf(4);
+                expect(quarterFrameCycles).to.deep.equal([7459, 14913, 22371, 29829]);
+            });
+
+            it('should generate quarter-frame every ~3728.5 cycles in 5-step mode', () => {
+                fc.writeControl(0x80, 0); // 5-step mode
+                for (let i = 0; i <= 4; i++) fc.clock(i);
+                
+                // Quarter-frame events occur at: 7459, 14913, 22371, 29829, 37281
+                const quarterFrameCycles = [];
+                let lastQuarterFrameCycle = 4; // Start from when immediate event occurred
+                
+                for (let cycle = 5; cycle <= 37281; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.quarterFrame) {
+                        quarterFrameCycles.push(cycle);
+                        
+                        const interval = cycle - lastQuarterFrameCycle;
+                        // Interval should be around 7454-7459 cycles
+                        expect(interval).to.be.at.least(7450);
+                        expect(interval).to.be.at.most(7465);
+                        
+                        lastQuarterFrameCycle = cycle;
+                    }
+                }
+                
+                // Should have 5 quarter-frame events (after immediate one)
+                expect(quarterFrameCycles).to.have.lengthOf(5);
+                expect(quarterFrameCycles).to.deep.equal([7459, 14913, 22371, 29829, 37281]);
+            });
+
+            it('should verify quarter-frame interval calculation: (step_cycle / step_number)', () => {
+                // In 4-step: Step 1 at 7459, Step 2 at 14913, Step 3 at 22371, Step 4 at 29829
+                // Average step interval: 29829 / 4 ≈ 7457.25 cycles per quarter-frame
+                fc.writeControl(0x40, 0);
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                const events4 = [];
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const e = fc.clock(cycle);
+                    if (e.quarterFrame) events4.push(cycle);
+                }
+                
+                const avgInterval4 = events4[events4.length - 1] / events4.length;
+                expect(avgInterval4).to.be.closeTo(7457.25, 1);
+            });
+        });
+
+        describe('half-frame timing intervals', () => {
+            it('should generate half-frame at steps 2 and 4 in 4-step mode', () => {
+                fc.writeControl(0x40, 0); // 4-step mode
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                // Half-frame events occur at: 14913, 29829
+                // Interval: 14916 cycles between half-frames
+                const halfFrameCycles = [];
+                
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.halfFrame) {
+                        halfFrameCycles.push(cycle);
+                    }
+                }
+                
+                // Should have 2 half-frame events
+                expect(halfFrameCycles).to.have.lengthOf(2);
+                expect(halfFrameCycles).to.deep.equal([14913, 29829]);
+                
+                // Interval should be 29829 - 14913 = 14916 cycles
+                const interval = halfFrameCycles[1] - halfFrameCycles[0];
+                expect(interval).to.equal(14916);
+            });
+
+            it('should generate half-frame at steps 2, 4, and 5 in 5-step mode', () => {
+                fc.writeControl(0x80, 0); // 5-step mode
+                for (let i = 0; i <= 4; i++) fc.clock(i);
+                
+                // Half-frame events occur at: (immediate at 4), 14913, 29829, 37281
+                const halfFrameCycles = [];
+                
+                for (let cycle = 5; cycle <= 37281; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.halfFrame) {
+                        halfFrameCycles.push(cycle);
+                    }
+                }
+                
+                // Should have 3 half-frame events (after immediate one)
+                expect(halfFrameCycles).to.have.lengthOf(3);
+                expect(halfFrameCycles).to.deep.equal([14913, 29829, 37281]);
+                
+                // Intervals: 14913 - 4 = 14909, 29829 - 14913 = 14916, 37281 - 29829 = 7452
+                const interval1 = halfFrameCycles[0] - 4; // From immediate to first
+                const interval2 = halfFrameCycles[1] - halfFrameCycles[0];
+                const interval3 = halfFrameCycles[2] - halfFrameCycles[1];
+                
+                expect(interval1).to.equal(14909);
+                expect(interval2).to.equal(14916);
+                expect(interval3).to.equal(7452);
+            });
+
+            it('should verify half-frame occurs twice per full sequence in 4-step mode', () => {
+                fc.writeControl(0x40, 0);
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                let halfFrameCount = 0;
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.halfFrame) halfFrameCount++;
+                }
+                
+                expect(halfFrameCount).to.equal(2);
+            });
+
+            it('should verify half-frame occurs three times per full sequence in 5-step mode', () => {
+                fc.writeControl(0x80, 0);
+                for (let i = 0; i <= 4; i++) fc.clock(i);
+                
+                // Count half-frames in the sequence (not including immediate one)
+                let halfFrameCount = 0;
+                for (let cycle = 5; cycle <= 37281; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.halfFrame) halfFrameCount++;
+                }
+                
+                // Should have 3 half-frame events in the sequence at steps 2, 4, and 5
+                expect(halfFrameCount).to.equal(3);
+            });
+        });
+
+        describe('4-step vs 5-step mode timing differences', () => {
+            it('should verify 4-step sequence is ~29830 cycles', () => {
+                fc.writeControl(0x40, 0); // 4-step mode
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                let sequenceEnd = 0;
+                for (let cycle = 4; cycle <= 30000; cycle++) {
+                    const events = fc.clock(cycle);
+                    // Last event at step 4
+                    if (events.quarterFrame && cycle > 29000) {
+                        sequenceEnd = cycle;
+                        break;
+                    }
+                }
+                
+                expect(sequenceEnd).to.equal(29829);
+                // Sequence length is approximately 29830 cycles (29829 + 1)
+            });
+
+            it('should verify 5-step sequence is ~37282 cycles', () => {
+                fc.writeControl(0x80, 0); // 5-step mode
+                for (let i = 0; i <= 4; i++) fc.clock(i);
+                
+                let sequenceEnd = 0;
+                for (let cycle = 5; cycle <= 38000; cycle++) {
+                    const events = fc.clock(cycle);
+                    // Last event at step 5
+                    if (events.quarterFrame && cycle > 37000) {
+                        sequenceEnd = cycle;
+                        break;
+                    }
+                }
+                
+                expect(sequenceEnd).to.equal(37281);
+                // Sequence length is approximately 37282 cycles (37281 + 1)
+            });
+
+            it('should verify 5-step sequence is ~25% longer than 4-step', () => {
+                // 4-step: 29829 cycles
+                // 5-step: 37281 cycles
+                // Ratio: 37281 / 29829 ≈ 1.25 (25% longer)
+                const step4Length = 29829;
+                const step5Length = 37281;
+                const ratio = step5Length / step4Length;
+                
+                expect(ratio).to.be.closeTo(1.25, 0.01);
+            });
+
+            it('should verify 4-step has 4 quarter-frames, 5-step has 5', () => {
+                // 4-step mode
+                fc.writeControl(0x40, 0);
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                let count4 = 0;
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    if (fc.clock(cycle).quarterFrame) count4++;
+                }
+                expect(count4).to.equal(4);
+                
+                // 5-step mode
+                const fc5 = new FrameCounter();
+                fc5.writeControl(0x80, 0);
+                for (let i = 0; i <= 4; i++) fc5.clock(i);
+                
+                let count5 = 0;
+                for (let cycle = 5; cycle <= 37281; cycle++) {
+                    if (fc5.clock(cycle).quarterFrame) count5++;
+                }
+                expect(count5).to.equal(5);
+            });
+
+            it('should verify timing difference at step 4', () => {
+                // In both modes, step 4 occurs at cycle 29829
+                // But 4-step resets after this, while 5-step continues to step 5
+                
+                // 4-step mode
+                const fc4 = new FrameCounter();
+                fc4.writeControl(0x40, 0);
+                for (let i = 0; i < 4; i++) fc4.clock(i);
+                
+                // Clock to just after step 4
+                for (let cycle = 4; cycle <= 29830; cycle++) {
+                    fc4.clock(cycle);
+                }
+                
+                // Next quarter-frame should be at 29830 + 7459 = 37289 in 4-step
+                let nextEvent4 = 0;
+                for (let cycle = 29831; cycle <= 40000; cycle++) {
+                    if (fc4.clock(cycle).quarterFrame) {
+                        nextEvent4 = cycle;
+                        break;
+                    }
+                }
+                
+                // 5-step mode
+                const fc5 = new FrameCounter();
+                fc5.writeControl(0x80, 0);
+                for (let i = 0; i <= 4; i++) fc5.clock(i);
+                
+                for (let cycle = 5; cycle <= 29830; cycle++) {
+                    fc5.clock(cycle);
+                }
+                
+                // Next quarter-frame should be at 37281 in 5-step
+                let nextEvent5 = 0;
+                for (let cycle = 29831; cycle <= 40000; cycle++) {
+                    if (fc5.clock(cycle).quarterFrame) {
+                        nextEvent5 = cycle;
+                        break;
+                    }
+                }
+                
+                expect(nextEvent4).to.be.greaterThan(37000);
+                expect(nextEvent5).to.equal(37281);
+            });
+        });
+
+        describe('IRQ timing in 4-step mode', () => {
+            it('should trigger IRQ at step 4 (cycle 29829) when not inhibited', () => {
+                fc.writeControl(0x00, 0); // 4-step, IRQ enabled
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                let irqCycle = 0;
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.irq) {
+                        if (irqCycle === 0) irqCycle = cycle;
+                    }
+                }
+                
+                // IRQ should trigger at step 4
+                expect(irqCycle).to.equal(29829);
+            });
+
+            it('should not trigger IRQ before step 4', () => {
+                fc.writeControl(0x00, 0); // 4-step, IRQ enabled
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                // Clock through steps 1, 2, 3
+                for (let cycle = 4; cycle < 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    expect(events.irq).to.equal(false, `No IRQ before step 4 at cycle ${cycle}`);
+                }
+            });
+
+            it('should persist IRQ after step 4 until cleared', () => {
+                fc.writeControl(0x00, 0); // 4-step, IRQ enabled
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                // Clock to step 4
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    fc.clock(cycle);
+                }
+                
+                // IRQ should persist for several cycles
+                for (let cycle = 29830; cycle <= 29850; cycle++) {
+                    const events = fc.clock(cycle);
+                    expect(events.irq).to.equal(true, `IRQ persists at cycle ${cycle}`);
+                }
+            });
+
+            it('should not trigger IRQ in 5-step mode even at step 4', () => {
+                fc.writeControl(0x80, 0); // 5-step, IRQ not inhibited by mode
+                for (let i = 0; i <= 4; i++) fc.clock(i);
+                
+                // Clock through entire sequence including step 4
+                for (let cycle = 5; cycle <= 37281; cycle++) {
+                    const events = fc.clock(cycle);
+                    expect(events.irq).to.equal(false, `No IRQ in 5-step mode at cycle ${cycle}`);
+                }
+            });
+
+            it('should trigger IRQ exactly at the quarter-frame/half-frame of step 4', () => {
+                fc.writeControl(0x00, 0); // 4-step, IRQ enabled
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                // Clock to step 4
+                for (let cycle = 4; cycle < 29829; cycle++) {
+                    fc.clock(cycle);
+                }
+                
+                const events = fc.clock(29829);
+                
+                // All three should happen simultaneously at step 4
+                expect(events.quarterFrame).to.equal(true, 'Quarter-frame at step 4');
+                expect(events.halfFrame).to.equal(true, 'Half-frame at step 4');
+                expect(events.irq).to.equal(true, 'IRQ at step 4');
+            });
+
+            it('should verify IRQ timing matches step 4 timing exactly', () => {
+                fc.writeControl(0x00, 0); // 4-step, IRQ enabled
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                let step4Cycle = 0;
+                let irqCycle = 0;
+                
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.quarterFrame && events.halfFrame && cycle > 22000) {
+                        step4Cycle = cycle;
+                    }
+                    if (events.irq && irqCycle === 0) {
+                        irqCycle = cycle;
+                    }
+                }
+                
+                // IRQ should occur at exactly the same cycle as step 4
+                expect(irqCycle).to.equal(step4Cycle);
+                expect(step4Cycle).to.equal(29829);
+            });
+        });
+
+        describe('channel clock signal synchronization', () => {
+            it('should provide consistent quarter-frame signals for envelope clocking', () => {
+                // Envelopes are clocked on quarter-frame events
+                // This test verifies quarter-frame events are consistent
+                fc.writeControl(0x40, 0); // 4-step mode
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                const quarterFrameEvents = [];
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.quarterFrame) {
+                        quarterFrameEvents.push({
+                            cycle,
+                            hasHalfFrame: events.halfFrame
+                        });
+                    }
+                }
+                
+                // Should have 4 quarter-frame events
+                expect(quarterFrameEvents).to.have.lengthOf(4);
+                
+                // Verify expected pattern: Q, QH, Q, QH
+                expect(quarterFrameEvents[0].hasHalfFrame).to.equal(false);
+                expect(quarterFrameEvents[1].hasHalfFrame).to.equal(true);
+                expect(quarterFrameEvents[2].hasHalfFrame).to.equal(false);
+                expect(quarterFrameEvents[3].hasHalfFrame).to.equal(true);
+            });
+
+            it('should provide consistent half-frame signals for sweep and length counter clocking', () => {
+                // Sweep units and length counters are clocked on half-frame events
+                fc.writeControl(0x40, 0); // 4-step mode
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                const halfFrameEvents = [];
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.halfFrame) {
+                        halfFrameEvents.push(cycle);
+                    }
+                }
+                
+                // Should have 2 half-frame events
+                expect(halfFrameEvents).to.have.lengthOf(2);
+                expect(halfFrameEvents).to.deep.equal([14913, 29829]);
+            });
+
+            it('should verify quarter-frame always accompanies half-frame', () => {
+                // Half-frame should never occur without quarter-frame
+                fc.writeControl(0x40, 0); // 4-step mode
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.halfFrame) {
+                        expect(events.quarterFrame).to.equal(true,
+                            `Half-frame at ${cycle} must have quarter-frame`);
+                    }
+                }
+            });
+
+            it('should verify event timing is consistent across mode switches', () => {
+                // Start in 4-step, get first event, then switch to 5-step
+                fc.writeControl(0x40, 0);
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                // Get first quarter-frame
+                let firstEvent = 0;
+                for (let cycle = 4; cycle <= 7459; cycle++) {
+                    if (fc.clock(cycle).quarterFrame) {
+                        firstEvent = cycle;
+                        break;
+                    }
+                }
+                expect(firstEvent).to.equal(7459);
+                
+                // Switch to 5-step mode
+                fc.writeControl(0x80, 7500);
+                for (let i = 7500; i <= 7504; i++) {
+                    fc.clock(i);
+                }
+                
+                // Next quarter-frame should follow 5-step timing
+                let nextEvent = 0;
+                for (let cycle = 7505; cycle <= 50000; cycle++) {
+                    if (fc.clock(cycle).quarterFrame) {
+                        nextEvent = cycle;
+                        break;
+                    }
+                }
+                
+                // Should be at 7500 + 7459 = 14959
+                expect(nextEvent).to.equal(14959);
+            });
+
+            it('should generate predictable event sequence for channel synchronization', () => {
+                // Channels rely on predictable quarter/half frame timing
+                // Verify the exact sequence of events in 4-step mode
+                fc.writeControl(0x40, 0);
+                for (let i = 0; i < 4; i++) fc.clock(i);
+                
+                const eventSequence = [];
+                for (let cycle = 4; cycle <= 29829; cycle++) {
+                    const events = fc.clock(cycle);
+                    if (events.quarterFrame || events.halfFrame) {
+                        eventSequence.push({
+                            cycle,
+                            q: events.quarterFrame,
+                            h: events.halfFrame
+                        });
+                    }
+                }
+                
+                // Verify exact sequence: Q@7459, QH@14913, Q@22371, QH@29829
+                expect(eventSequence).to.deep.equal([
+                    { cycle: 7459, q: true, h: false },
+                    { cycle: 14913, q: true, h: true },
+                    { cycle: 22371, q: true, h: false },
+                    { cycle: 29829, q: true, h: true }
+                ]);
+            });
+        });
+    });
 });

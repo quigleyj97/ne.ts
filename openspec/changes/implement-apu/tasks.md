@@ -211,9 +211,9 @@
 - [x] 18.1 Write comprehensive unit tests for each APU channel class
 - [x] 18.2 Write unit tests for envelope, sweep, and frame counter units
 - [x] 18.3 Write unit tests for register read/write behavior
-- [ ] 18.4 Write unit tests for mixing formulas with known values
+- [x] 18.4 Write unit tests for mixing formulas with known values
 - [x] 18.5 Write unit tests for each hardware quirk independently
-- [ ] 18.6 Write unit tests for timing synchronization
+- [x] 18.6 Write unit tests for timing synchronization
 - [x] 18.7 Verify all unit tests pass before ROM testing
 
 ## 19. Test ROM Integration
