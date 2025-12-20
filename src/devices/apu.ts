@@ -522,6 +522,32 @@ export class Apu2A03 implements IBusDevice {
         this.writeFrameCounter(0);
     }
 
+    //#region DMC DMA Interface
+    
+    /** Check if DMC needs a sample via DMA
+     *
+     * Returns the address that needs to be read, or null if no DMA request is pending.
+     * This is called by the NES emulator to determine if a DMC DMA cycle should occur.
+     *
+     * @returns Address to read from, or null if no request pending
+     */
+    public getDmcDmaRequest(): u16 | null {
+        return this.dmc.getDmaRequest();
+    }
+
+    /** Load sample byte from DMA
+     *
+     * Called when a byte has been read from CPU memory via DMA.
+     * This loads the byte into the DMC channel's sample buffer.
+     *
+     * @param byte The byte read from CPU memory
+     */
+    public loadDmcSample(byte: u8): void {
+        this.dmc.loadSampleByte(byte);
+    }
+    
+    //#endregion
+
     //#region Status Register ($4015) Implementation
     
     /** Read status register ($4015)
@@ -704,6 +730,14 @@ export class DummyApu implements IBusDevice {
     }
     
     public reset(): void {
+        // No-op
+    }
+    
+    public getDmcDmaRequest(): u16 | null {
+        return null;
+    }
+    
+    public loadDmcSample(_byte: u8): void {
         // No-op
     }
 }

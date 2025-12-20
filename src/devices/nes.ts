@@ -21,6 +21,7 @@ export class NesEmulator {
     private is_cpu_idle = false;
     private is_frame_ready = false;
     private cpu_cycle_counter = 0;
+    private dmcStallCycles: number = 0;
 
     constructor(cart: ICartridge) {
         const cpuBus = new Bus();
@@ -117,7 +118,23 @@ export class NesEmulator {
             this.oam_dma.tick();
             // Clock APU once per CPU cycle
             this.apu.clock();
-            if (this.is_cpu_idle && !this.oam_dma.is_dma_active) {
+            
+            // Handle DMC DMA requests
+            const dmcRequest = this.apu.getDmcDmaRequest();
+            if (dmcRequest !== null) {
+                // Read the byte from CPU bus at the requested address
+                const sampleByte = this.cpu.read_bus(dmcRequest);
+                // Load the sample into the DMC channel
+                this.apu.loadDmcSample(sampleByte);
+                // Add stall cycles (4 cycles for DMC DMA read)
+                this.dmcStallCycles = 4;
+            }
+            
+            // Handle DMC stall cycles
+            if (this.dmcStallCycles > 0) {
+                this.dmcStallCycles--;
+            } else if (this.is_cpu_idle && !this.oam_dma.is_dma_active) {
+                // Only execute CPU when not stalled by DMC or OAM DMA
                 if (!debug) {
                     this.cpu.exec();
                 } else {

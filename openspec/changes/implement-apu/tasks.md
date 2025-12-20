@@ -184,15 +184,15 @@
 - [x] 15.12 Tune buffer size empirically for optimal latency/stability balance
 
 ## 16. NES Layer DMC DMA Integration (Not CPU Layer)
-- [ ] 16.1 Add `dmcStallCycles` counter to `NesEmulator` class (NOT `Cpu6502` - keep CPU platform-agnostic)
-- [ ] 16.2 Implement DMC DMA stall handling in `NesEmulator.tick()` similar to PPU DMA pattern (see [`src/devices/ppu.ts`](../../../src/devices/ppu.ts))
-- [ ] 16.3 When stalled, continue clocking PPU and APU but not CPU
-- [ ] 16.4 Add `getDmcDmaRequest()` method to `Apu2A03` to query DMC DMA needs
-- [ ] 16.5 Read sample byte from CPU bus when DMC requests DMA
-- [ ] 16.6 Add `loadDmcSample(byte: u8)` method to `Apu2A03` to deliver DMA data
-- [ ] 16.7 Set appropriate stall cycles (~4 based on CPU alignment)
-- [ ] 16.8 Write unit tests for NES layer DMA mechanism
-- [ ] 16.9 Write integration tests for DMC DMA timing
+- [x] 16.1 Add `dmcStallCycles` counter to `NesEmulator` class (NOT `Cpu6502` - keep CPU platform-agnostic)
+- [x] 16.2 Implement DMC DMA stall handling in `NesEmulator.tick()` similar to PPU DMA pattern (see [`src/devices/ppu.ts`](../../../src/devices/ppu.ts))
+- [x] 16.3 When stalled, continue clocking PPU and APU but not CPU
+- [x] 16.4 Add `getDmcDmaRequest()` method to `Apu2A03` to query DMC DMA needs
+- [x] 16.5 Read sample byte from CPU bus when DMC requests DMA
+- [x] 16.6 Add `loadDmcSample(byte: u8)` method to `Apu2A03` to deliver DMA data
+- [x] 16.7 Set appropriate stall cycles (~4 based on CPU alignment)
+- [x] 16.8 Write unit tests for NES layer DMA mechanism
+- [x] 16.9 Write integration tests for DMC DMA timing
 
 ## 17. Hardware Quirks Implementation
 - [ ] 17.1 Verify Pulse 1 sweep uses ones' complement negation
