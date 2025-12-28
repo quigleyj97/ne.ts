@@ -14,7 +14,7 @@ This review systematically checked each task marked with `[x]` (complete) in the
 2. **Task 1.2**: Create `src/devices/apu/tables.ts` - **NOT IMPLEMENTED**  
 3. **Task 11.8**: Implement `setInputFrequency(hz: number)` for dynamic rate control - **NOT IMPLEMENTED**
 
-All other marked tasks (245 out of 248 completed tasks) are correctly implemented.
+All other marked tasks (153 out of 156 completed tasks) are correctly implemented.
 
 ---
 
