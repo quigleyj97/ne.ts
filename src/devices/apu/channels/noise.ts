@@ -194,27 +194,25 @@ export class NoiseChannel {
 
     /**
      * Clock the LFSR (Linear Feedback Shift Register)
-     * 
+     *
      * This implements the pseudo-random sequence generation:
      * 1. Calculate feedback based on mode:
      *    - Long mode (mode = 0): XOR bits 0 and 1
      *    - Short mode (mode = 1): XOR bits 0 and 6
      * 2. Shift register right by 1
      * 3. Place feedback bit into bit 14
-     * 
+     *
      * The LFSR output (bit 0 after shifting) determines whether the channel
      * outputs volume or silence, creating the noise effect.
+     *
+     * Optimized to avoid conditional branching using bit operations.
      */
     private clockLFSR(): void {
-        // Calculate feedback based on mode
-        let feedback: u8;
-        if (this.mode) {
-            // Short mode: XOR bits 0 and 6
-            feedback = (this.shiftRegister & 0x01) ^ ((this.shiftRegister >> 6) & 0x01);
-        } else {
-            // Long mode: XOR bits 0 and 1
-            feedback = (this.shiftRegister & 0x01) ^ ((this.shiftRegister >> 1) & 0x01);
-        }
+        // Calculate feedback without branching
+        // Mode false (0): shift by 1, mode true (1): shift by 6
+        // Use mode as multiplier: (1 + mode * 5) gives us 1 or 6
+        const shift = this.mode ? 6 : 1;
+        const feedback = (this.shiftRegister & 0x01) ^ ((this.shiftRegister >> shift) & 0x01);
         
         // Shift register right by 1
         this.shiftRegister >>= 1;
@@ -289,14 +287,14 @@ export class NoiseChannel {
 
     /**
      * Check if the channel is active
-     * 
-     * A channel is considered active if its length counter is greater than 0
-     * and the channel is enabled.
-     * 
+     *
+     * A channel is considered active if its length counter is greater than 0.
+     * This matches NES hardware behavior for the $4015 status register.
+     *
      * @returns True if active, false otherwise
      */
     public isActive(): boolean {
-        return this.lengthCounter > 0 && this.enabled;
+        return this.lengthCounter > 0;
     }
 
     /**

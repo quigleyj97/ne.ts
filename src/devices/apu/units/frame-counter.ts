@@ -56,6 +56,18 @@ export interface FrameCounterEvents {
  * https://www.nesdev.org/wiki/APU_Frame_Counter
  */
 export class FrameCounter {
+    //#region Event Reuse (Performance Optimization)
+    /**
+     * Reusable events object to avoid allocations in hot path
+     * This single instance is reset and reused for every clock() call
+     */
+    private readonly events: FrameCounterEvents = {
+        quarterFrame: false,
+        halfFrame: false,
+        irq: false
+    };
+    //#endregion
+
     //#region Sequencer Step Timing (CPU cycles)
     /** Step timing for both 4-step and 5-step modes */
     private static readonly STEP_CYCLES = [7459, 14913, 22371, 29829, 37281];
@@ -183,19 +195,19 @@ export class FrameCounter {
 
         // If 5-step mode, immediately generate quarter and half frame events
         if (this.mode) {
-            return {
-                quarterFrame: true,
-                halfFrame: true,
-                irq: false
-            };
+            // Reset and configure reusable events object
+            this.events.quarterFrame = true;
+            this.events.halfFrame = true;
+            this.events.irq = false;
+            return this.events;
         }
 
         // Return empty events for 4-step mode to signal write took effect
-        return {
-            quarterFrame: false,
-            halfFrame: false,
-            irq: false
-        };
+        // Reset and configure reusable events object
+        this.events.quarterFrame = false;
+        this.events.halfFrame = false;
+        this.events.irq = false;
+        return this.events;
     }
 
     /**
@@ -219,12 +231,10 @@ export class FrameCounter {
         // Calculate position in sequence
         const cycleInSequence = cpuCycle - this.baseCycle;
 
-        // Default: no events
-        const events: FrameCounterEvents = {
-            quarterFrame: false,
-            halfFrame: false,
-            irq: false
-        };
+        // Reset flags on reusable events object
+        this.events.quarterFrame = false;
+        this.events.halfFrame = false;
+        this.events.irq = false;
 
         // Check if we've reached a step boundary
         const maxSteps = this.mode ? 5 : 4;
@@ -235,17 +245,17 @@ export class FrameCounter {
                 this.step = i + 1;
                 
                 // All steps generate quarter-frame
-                events.quarterFrame = true;
+                this.events.quarterFrame = true;
                 
                 // Steps 2, 4 (and 5 in 5-step mode) generate half-frame
                 if (i === 1 || i === 3 || i === 4) {
-                    events.halfFrame = true;
+                    this.events.halfFrame = true;
                 }
                 
                 // Step 4 in 4-step mode generates IRQ if not inhibited
                 if (i === 3 && !this.mode && !this.irqInhibit) {
                     this.irqFlag = true;
-                    events.irq = true;
+                    this.events.irq = true;
                 }
                 
                 break;
@@ -263,10 +273,10 @@ export class FrameCounter {
 
         // If IRQ flag is set, report it (it persists until cleared)
         if (this.irqFlag && !this.irqInhibit) {
-            events.irq = true;
+            this.events.irq = true;
         }
 
-        return events;
+        return this.events;
     }
 
     /**

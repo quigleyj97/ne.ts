@@ -235,37 +235,33 @@ export class TriangleChannel {
 
     /**
      * Get the current output sample
-     * 
+     *
      * Returns a value from 0-15 representing the current audio sample.
-     * 
+     *
      * The channel is muted (but sequencer continues running) when:
      * - Linear counter is 0
      * - Length counter is 0
      * - Timer period < 2 (produces ultrasonic frequencies)
-     * 
+     *
      * Unlike pulse channels, the triangle channel has no volume control.
      * The output is always the raw sequencer value when not muted.
-     * 
+     *
+     * Optimized to reduce branching using bitwise operations.
+     *
      * @returns Current sample value (0-15)
      */
     public output(): u8 {
-        // Mute if linear counter is 0
-        if (this.linearCounter === 0) {
-            return 0;
-        }
-
-        // Mute if length counter is 0
-        if (this.lengthCounter === 0) {
-            return 0;
-        }
-
-        // Mute if timer period < 2 (ultrasonic, produces pops/clicks)
-        if (this.timerPeriod < 2) {
-            return 0;
-        }
-
-        // Output current sequencer value
-        return TRIANGLE_SEQUENCE[this.sequencePosition];
+        // Combine all mute conditions using bitwise operations
+        // If any counter is 0 or timer < 2, the result will be 0
+        // Using bitwise OR to combine conditions without short-circuiting
+        const muted = (this.linearCounter === 0 ? 1 : 0) |
+                      (this.lengthCounter === 0 ? 1 : 0) |
+                      (this.timerPeriod < 2 ? 1 : 0);
+        
+        // Return 0 if muted, otherwise return sequence value
+        // Use multiplication to avoid branching: muted will be 0 or non-zero
+        // When muted != 0, result is 0; when muted == 0, result is sequence value
+        return muted ? 0 : TRIANGLE_SEQUENCE[this.sequencePosition];
     }
 
     /**

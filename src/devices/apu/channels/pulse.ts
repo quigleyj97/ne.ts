@@ -15,24 +15,31 @@ const LENGTH_TABLE = [
 ];
 
 /**
- * Duty cycle sequences for pulse channels
- * 
+ * Duty cycle sequences for pulse channels (flattened for performance)
+ *
  * Each duty cycle is an 8-step sequence where:
  * - 0 = low/silent
  * - 1 = high/audible
- * 
+ *
  * The four duty cycles are:
  * - 0: 12.5% duty (one high step out of eight)
  * - 1: 25% duty (two high steps)
  * - 2: 50% duty (four high steps)
  * - 3: 75% duty (six high steps, equivalent to negated 25%)
+ *
+ * Stored as a flat Uint8Array for faster single-index access.
+ * Access pattern: index = (dutyCycle << 3) | dutyPosition
  */
-const DUTY_TABLE = [
-    [0, 0, 0, 0, 0, 0, 0, 1], // 12.5%
-    [0, 0, 0, 0, 0, 0, 1, 1], // 25%
-    [0, 0, 0, 0, 1, 1, 1, 1], // 50%
-    [1, 1, 1, 1, 1, 1, 0, 0]  // 75%
-];
+const DUTY_TABLE_FLAT = new Uint8Array([
+    // dutyCycle 0: 12.5%
+    0, 0, 0, 0, 0, 0, 0, 1,
+    // dutyCycle 1: 25%
+    0, 0, 0, 0, 0, 0, 1, 1,
+    // dutyCycle 2: 50%
+    0, 0, 0, 0, 1, 1, 1, 1,
+    // dutyCycle 3: 75% (negated 25%)
+    1, 1, 1, 1, 1, 1, 0, 0
+]);
 
 /**
  * APU Pulse Channel
@@ -60,7 +67,7 @@ export class PulseChannel {
      * Channel number (1 or 2)
      * This is passed to the sweep unit to determine negate behavior
      */
-    private readonly channelId: 1 | 2;
+    private readonly channelId!: 1 | 2; // Definite assignment assertion
     //#endregion
 
     //#region Duty Cycle State
@@ -127,7 +134,7 @@ export class PulseChannel {
 
     /**
      * Create a new PulseChannel
-     * 
+     *
      * @param channelId Channel number (1 or 2) - determines sweep negate behavior
      */
     constructor(channelId: 1 | 2) {
@@ -267,7 +274,9 @@ export class PulseChannel {
         }
 
         // Get current duty cycle value (0 or 1)
-        const dutyValue = DUTY_TABLE[this.dutyCycle][this.dutyPosition];
+        // Use bit shift for fast index calculation: dutyCycle * 8 + dutyPosition
+        const dutyIndex = (this.dutyCycle << 3) | this.dutyPosition;
+        const dutyValue = DUTY_TABLE_FLAT[dutyIndex];
         
         // If duty is low, output 0; if high, output envelope volume
         if (dutyValue === 0) {
@@ -293,14 +302,14 @@ export class PulseChannel {
 
     /**
      * Check if the channel is active
-     * 
-     * A channel is considered active if its length counter is greater than 0
-     * and the channel is enabled.
-     * 
+     *
+     * A channel is considered active if its length counter is greater than 0.
+     * This matches NES hardware behavior for the $4015 status register.
+     *
      * @returns True if active, false otherwise
      */
     public isActive(): boolean {
-        return this.lengthCounter > 0 && this.enabled;
+        return this.lengthCounter > 0;
     }
 
     /**

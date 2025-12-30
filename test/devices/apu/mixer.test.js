@@ -420,11 +420,10 @@ describe('ApuMixer', () => {
             it('should correctly mix balanced configuration', () => {
                 // Balanced: P1=8, P2=8, T=8, N=8, D=64
                 // pulse_out = 95.88 / ((8128/16) + 100) ≈ 0.15768
-                // tnd_out = 159.79 / ((1 / (8/8227 + 8/12241 + 64/22638)) + 100) ≈ 0.53
-                // total ≈ 0.687, Normalized: ≈ 0.374
+                // tnd_out = 159.79 / ((1 / (8/8227 + 8/12241 + 64/22638)) + 100) ≈ 0.4921
+                // total ≈ 0.64978, Normalized: ≈ 0.29956
                 const output = mixer.mix(8, 8, 8, 8, 64);
-                expect(output).to.be.greaterThan(0.3);
-                expect(output).to.be.lessThan(0.5);
+                expect(output).to.be.closeTo(0.3, 0.01);
             });
 
             it('should correctly mix single pulse value of 1', () => {

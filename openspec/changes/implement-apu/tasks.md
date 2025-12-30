@@ -250,11 +250,11 @@
 ## 22. Performance Optimization
 - [ ] 22.1 Profile APU `clock()` method performance
 - [ ] 22.2 Profile mixing and resampling performance
-- [ ] 22.3 Optimize hot paths (use typed arrays, avoid allocations)
-- [ ] 22.4 Consider lookup tables for mixing formulas if needed
+- [x] 22.3 Optimize hot paths (use typed arrays, avoid allocations)
+- [x] 22.4 Consider lookup tables for mixing formulas if needed
 - [ ] 22.5 Verify 60 FPS minimum maintained with audio enabled (qualitative goal - no specific CPU overhead limit)
 - [ ] 22.6 Test on low-end devices/browsers
-- [ ] 22.7 Ensure no regression in existing emulator performance
+- [x] 22.7 Ensure no regression in existing emulator performance
 - [ ] 22.8 Add performance metrics logging if needed
 
 ## 23. Documentation

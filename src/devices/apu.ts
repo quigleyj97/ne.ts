@@ -389,7 +389,7 @@ export class Apu2A03 implements IBusDevice {
      * For write-only registers, returns the last written value to approximate open bus behavior.
      */
     public read(addr: u16): u8 {
-        const offset = addr;  // addr is already relative to APU_START_ADDR
+        const offset = addr;  // addr is already an offset (0x00-0x17) relative to APU_START_ADDR
         
         // Only $4015 (offset 0x15) is readable
         if (offset === 0x15) {
@@ -410,7 +410,7 @@ export class Apu2A03 implements IBusDevice {
      * Routes writes to appropriate channel handlers based on address.
      */
     public write(addr: u16, value: u8): void {
-        const offset = addr;  // addr is already relative to APU_START_ADDR
+        const offset = addr;  // addr is already an offset (0x00-0x17) relative to APU_START_ADDR
         
         // Store the value in register array
         if (offset >= 0 && offset < this.registers.length) {
@@ -449,13 +449,20 @@ export class Apu2A03 implements IBusDevice {
      * - Channel timer clocking
      * - Envelope/sweep/length counter updates
      * - Audio mixing
+     *
+     * Optimized to reduce overhead in the hot path.
      */
     public clock(): void {
+        // Increment CPU cycle counter first (needed for frame counter)
+        const cycle = this.cpuCycle++;
+        
         // Clock frame counter and get events
-        const events = this.frameCounter.clock(this.cpuCycle);
+        const events = this.frameCounter.clock(cycle);
         
         // Process quarter-frame events (envelopes and linear counter)
-        if (events.quarterFrame) {
+        // Assign to local var to enable better compiler optimization
+        const qf = events.quarterFrame;
+        if (qf) {
             this.pulse1.clockEnvelope();
             this.pulse2.clockEnvelope();
             this.triangle.clockLinearCounter();
@@ -463,7 +470,8 @@ export class Apu2A03 implements IBusDevice {
         }
         
         // Process half-frame events (length counters and sweep units)
-        if (events.halfFrame) {
+        const hf = events.halfFrame;
+        if (hf) {
             this.pulse1.clockLengthCounter();
             this.pulse1.clockSweep();
             this.pulse2.clockLengthCounter();
@@ -472,7 +480,7 @@ export class Apu2A03 implements IBusDevice {
             this.noise.clockLengthCounter();
         }
         
-        // Clock all channel timers (happens every APU cycle)
+        // Clock all channel timers (happens every CPU cycle)
         this.pulse1.clockTimer();
         this.pulse2.clockTimer();
         this.triangle.clock();
@@ -488,9 +496,6 @@ export class Apu2A03 implements IBusDevice {
         
         // Mix audio channels into a single sample
         this.currentSample = this.mixer.mix(p1Out, p2Out, triOut, noiseOut, dmcOut);
-        
-        // Increment CPU cycle counter
-        this.cpuCycle++;
     }
 
     /** Reset APU to power-on state
