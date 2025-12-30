@@ -23,7 +23,7 @@ export class NesEmulator {
     private cpu_cycle_counter = 0;
     private dmcStallCycles: number = 0;
 
-    constructor(cart: ICartridge) {
+    constructor(cart: ICartridge, workletPath?: string) {
         const cpuBus = new Bus();
         this.controller_dma = new ControllerDMAAdaptor();
         this.ram = new Ram(2048);
@@ -47,7 +47,7 @@ export class NesEmulator {
             mask: ControllerDMAAdaptor.MASK
         });
         // Map APU to CPU bus
-        this.apu = Apu2A03.build();
+        this.apu = Apu2A03.build(workletPath);
         cpuBus.map_device({
             dev: this.apu,
             start: APU_START_ADDR,
@@ -174,5 +174,25 @@ export class NesEmulator {
         // spin until the CPU is done ticking
         while (!this.cpu.tick()) {}
         return status;
+    }
+
+    /**
+     * Enable audio output from the APU.
+     * This requires a user gesture (e.g., button click) to initialize the AudioContext.
+     * @returns Promise that resolves when audio is enabled
+     */
+    public async enableAudio(): Promise<void> {
+        if (this.apu && typeof (this.apu as any).enableAudio === 'function') {
+            await (this.apu as any).enableAudio();
+        }
+    }
+
+    /**
+     * Disable audio output from the APU.
+     */
+    public disableAudio(): void {
+        if (this.apu && typeof (this.apu as any).disableAudio === 'function') {
+            (this.apu as any).disableAudio();
+        }
     }
 }

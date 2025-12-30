@@ -33,10 +33,10 @@ export class ApuMixer {
         // Apply non-linear TND mixing formula
         const tndOut = this.mixTnd(tri, noise, dmc);
         
-        // Combine the outputs and normalize to -1.0 to +1.0 range
-        // The combined output is in range 0 to ~1, so we scale and offset:
-        // output * 2 - 1 converts 0..1 range to -1..+1
-        return (pulseOut + tndOut) * 2.0 - 1.0;
+        // Combine the outputs
+        // The NES DAC outputs range from 0.0 (silence) to ~0.257 (all channels at max)
+        // This is a valid range for Web Audio API which accepts -1.0 to +1.0
+        return pulseOut + tndOut;
     }
 
     /**

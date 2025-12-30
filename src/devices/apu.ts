@@ -257,7 +257,7 @@ export class Apu2A03 implements IBusDevice {
      * - Apu2A03 if AudioContext exists but AudioWorklet doesn't (no audio output)
      * - DummyApu if neither is available (no-op implementation)
      */
-    public static build(): Apu2A03 | DummyApu {
+    public static build(workletPath?: string): Apu2A03 | DummyApu {
         try {
             // Check if AudioContext is available
             if (typeof AudioContext === 'undefined') {
@@ -272,7 +272,7 @@ export class Apu2A03 implements IBusDevice {
             
             if (hasWorkletSupport) {
                 // AudioWorklet is supported, create enhanced version with audio output
-                return new Apu2A03WithWorklet();
+                return new Apu2A03WithWorklet(workletPath);
             } else {
                 // AudioWorklet not supported, use basic APU without audio output
                 console.warn("AudioWorklet not supported, APU will run without audio output");
@@ -389,7 +389,7 @@ export class Apu2A03 implements IBusDevice {
      * For write-only registers, returns the last written value to approximate open bus behavior.
      */
     public read(addr: u16): u8 {
-        const offset = addr - APU_START_ADDR;
+        const offset = addr;  // addr is already relative to APU_START_ADDR
         
         // Only $4015 (offset 0x15) is readable
         if (offset === 0x15) {
@@ -402,7 +402,6 @@ export class Apu2A03 implements IBusDevice {
             return this.registers[offset];
         }
 
-        console.warn("Unhandled read() in APU, results may be incorrect");
         return 0;
     }
 
@@ -411,7 +410,7 @@ export class Apu2A03 implements IBusDevice {
      * Routes writes to appropriate channel handlers based on address.
      */
     public write(addr: u16, value: u8): void {
-        const offset = addr - APU_START_ADDR;
+        const offset = addr;  // addr is already relative to APU_START_ADDR
         
         // Store the value in register array
         if (offset >= 0 && offset < this.registers.length) {
@@ -480,14 +479,15 @@ export class Apu2A03 implements IBusDevice {
         this.noise.clockTimer();
         this.dmc.clock();
         
+        // Get channel outputs
+        const p1Out = this.pulse1.output();
+        const p2Out = this.pulse2.output();
+        const triOut = this.triangle.output();
+        const noiseOut = this.noise.getOutput();
+        const dmcOut = this.dmc.output();
+        
         // Mix audio channels into a single sample
-        this.currentSample = this.mixer.mix(
-            this.pulse1.output(),
-            this.pulse2.output(),
-            this.triangle.output(),
-            this.noise.getOutput(),
-            this.dmc.output()
-        );
+        this.currentSample = this.mixer.mix(p1Out, p2Out, triOut, noiseOut, dmcOut);
         
         // Increment CPU cycle counter
         this.cpuCycle++;
@@ -794,6 +794,9 @@ export class Apu2A03WithWorklet extends Apu2A03 {
     /** Path to the worklet processor module */
     private workletPath: string;
     
+    /** APU sample divider counter - only generate samples every APU_SAMPLE_DIVIDER clocks */
+    private apuSampleDivider: number = 0;
+    
     //#endregion
     
     /**
@@ -814,7 +817,8 @@ export class Apu2A03WithWorklet extends Apu2A03 {
         });
         
         // Store worklet path for lazy initialization
-        this.workletPath = workletPath || './apu/audio/worklet-processor.js';
+        // Default path works from demo/index.html perspective
+        this.workletPath = workletPath || '../lib/worklet/devices/apu/audio/worklet-processor.js';
         
         // Create resampler to convert from APU rate to output rate
         this.resampler = new Resampler(APU_SAMPLE_RATE, OUTPUT_SAMPLE_RATE);
@@ -842,6 +846,7 @@ export class Apu2A03WithWorklet extends Apu2A03 {
         this.workletInitPromise = (async () => {
             try {
                 // Load the AudioWorklet module
+                console.log('[APU] Attempting to load AudioWorklet from:', this.workletPath);
                 await this.audioContext.audioWorklet.addModule(this.workletPath);
                 
                 // Create the AudioWorkletNode
@@ -913,6 +918,14 @@ export class Apu2A03WithWorklet extends Apu2A03 {
             return;
         }
         
+        // Only generate audio samples at APU sample rate (CPU_FREQ / APU_SAMPLE_DIVIDER)
+        // This prevents pushing samples at 2x the expected rate
+        this.apuSampleDivider++;
+        if (this.apuSampleDivider < APU_SAMPLE_DIVIDER) {
+            return;
+        }
+        this.apuSampleDivider = 0;
+        
         // Push the current mixed sample to the resampler
         // The resampler handles rate conversion from APU rate to output rate
         this.resampler.push(this.currentSample);
@@ -978,8 +991,10 @@ export class Apu2A03WithWorklet extends Apu2A03 {
      * to the audio worklet.
      */
     public async enableAudio(): Promise<void> {
+        console.log('[APU] enableAudio() called');
         // Initialize worklet if not already done
         if (!this.workletInitialized) {
+            console.log('[APU] Worklet not initialized, initializing now...');
             try {
                 await this.initializeAudioWorklet();
             } catch (error) {
@@ -1048,12 +1063,18 @@ export class Apu2A03WithWorklet extends Apu2A03 {
     public override reset(): void {
         super.reset();
         
-        // Reset resampler
-        this.resampler.reset();
+        // Guard against being called from parent constructor
+        // before child is fully initialized
+        if (this.resampler) {
+            this.resampler.reset();
+        }
         
-        // Clear batch buffer
+        // Clear batch buffer (safe to assign even if undefined)
         this.batchBufferIndex = 0;
-        this.sampleBatchBuffer.fill(0);
+        if (this.sampleBatchBuffer) {
+            this.sampleBatchBuffer.fill(0);
+        }
         this.sampleCounter = 0;
+        this.apuSampleDivider = 0;
     }
 }
