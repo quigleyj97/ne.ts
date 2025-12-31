@@ -3,3 +3,4 @@ node_modules/
 lib/
 roms/
 .DS_Store
+demo/dist

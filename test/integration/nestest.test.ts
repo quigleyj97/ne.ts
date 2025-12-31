@@ -1,8 +1,8 @@
-import chai from "chai";
+// chai removed;
 import { readFileSync } from "fs";
 import { NesEmulator, CartridgeMapperFactory, parse_line, test_log_lines_eq } from "../../lib/index.js";
 
-const expect = chai.expect;
+
 
 const NESTEST_PATH = "./test/data/nestest.nes";
 const GOLDLOG_PATH = "./test/data/nestest.log";
@@ -15,7 +15,7 @@ describe("NESTEST", () => {
     /** @type {String[]} */
     let gold_log;
 
-    before(() => {
+    beforeAll(() => {
         const buf = readFileSync(NESTEST_PATH);
         gold_log = readFileSync(GOLDLOG_PATH, "utf8").split("\n");
         cart = CartridgeMapperFactory.from_buffer(buf);

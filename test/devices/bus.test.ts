@@ -1,7 +1,4 @@
-import chai from "chai";
-import { Bus } from "../../lib/index.js";
-
-const expect = chai.expect;
+import { Bus } from "../../src/index.js";
 
 describe("Bus", () => {
     const TEST_ADDR = 0x34;
@@ -10,27 +7,27 @@ describe("Bus", () => {
     const MIRRORED_ADDR = 0x1234;
 
     class TestDevice {
-        read(addr) {
-            expect(addr).to.equal(TEST_ADDR, "Read address mismatch");
+        read(addr: number): number {
+            expect(addr).toBe(TEST_ADDR);
             return TEST_DATA;
         }
-        write(addr, data) {
-            expect(addr).to.equal(TEST_ADDR, "Write address mismatch");
-            expect(data).to.equal(TEST_DATA, "Test data mismatch");
+        write(addr: number, data: number): void {
+            expect(addr).toBe(TEST_ADDR);
+            expect(data).toBe(TEST_DATA);
         }
     }
 
     it("should construct a Bus", () => {
         const bus = new Bus();
-        expect(bus).to.be.instanceOf(Bus);
+        expect(bus).toBeInstanceOf(Bus);
     });
 
     it("should map devices", () => {
         const bus = new Bus();
         const dev = new TestDevice();
         bus.map_device({dev, start: 0, end: 0xFFFF, mask: 0xFFFF});
-        expect(bus.devices).to.have.length(1);
-        expect(bus.read(TEST_ADDR)).to.equal(TEST_DATA);
+        expect(bus.devices).toHaveLength(1);
+        expect(bus.read(TEST_ADDR)).toBe(TEST_DATA);
         bus.write(TEST_ADDR, TEST_DATA);
     });
 
@@ -39,14 +36,14 @@ describe("Bus", () => {
         const bus = new Bus();
         const dev = new TestDevice();
         bus.map_device({dev, start: ADDR_OFFSET, end: 0xFFFF, mask: 0xFFFF});
-        expect(bus.read(TEST_ADDR + ADDR_OFFSET)).to.eq(TEST_DATA);
+        expect(bus.read(TEST_ADDR + ADDR_OFFSET)).toBe(TEST_DATA);
     });
 
     it("should mirror addresses", () => {
         const bus = new Bus();
         const dev = new TestDevice();
         bus.map_device({dev, start: 0, end: 0xFFFF, mask: TEST_MIRROR});
-        expect(bus.read(MIRRORED_ADDR)).to.eq(TEST_DATA);
+        expect(bus.read(MIRRORED_ADDR)).toBe(TEST_DATA);
         bus.write(MIRRORED_ADDR, TEST_DATA);
     });
 
@@ -55,6 +52,6 @@ describe("Bus", () => {
         const bus = new Bus();
         const dev = new TestDevice();
         bus.map_device({dev, start: ADDR_OFFSET, end: 0xFFFF, mask: TEST_MIRROR});
-        expect(bus.read(MIRRORED_ADDR + ADDR_OFFSET)).to.eq(TEST_DATA);
+        expect(bus.read(MIRRORED_ADDR + ADDR_OFFSET)).toBe(TEST_DATA);
     });
 });

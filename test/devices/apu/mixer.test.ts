@@ -1,7 +1,4 @@
-import chai from "chai";
-import { ApuMixer } from '../../../lib/devices/apu/audio/mixer.js';
-
-const expect = chai.expect;
+import { ApuMixer } from '../../../src/devices/apu/audio/mixer.js';
 
 /**
  * ApuMixer Unit Tests
@@ -29,12 +26,12 @@ describe('ApuMixer', () => {
 
     describe('initialization', () => {
         it('should construct a mixer', () => {
-            expect(mixer).to.be.instanceOf(ApuMixer);
+            expect(mixer).toBeInstanceOf(ApuMixer);
         });
 
         it('should return -1.0 when all channels are silent', () => {
             const output = mixer.mix(0, 0, 0, 0, 0);
-            expect(output).to.equal(-1.0);
+            expect(output).toBe(-1.0);
         });
     });
 
@@ -43,7 +40,7 @@ describe('ApuMixer', () => {
             // When both pulse channels are 0, pulse_out should be 0
             const output = mixer.mix(0, 0, 0, 0, 0);
             // 0 + 0 = 0, then (0) * 2 - 1 = -1
-            expect(output).to.equal(-1.0);
+            expect(output).toBe(-1.0);
         });
 
         it('should mix pulse1 only', () => {
@@ -52,28 +49,28 @@ describe('ApuMixer', () => {
             // tnd_out = 0 (all zero)
             // output = 0.14938 * 2 - 1 ≈ -0.70124
             const output = mixer.mix(15, 0, 0, 0, 0);
-            expect(output).to.be.closeTo(-0.701, 0.001);
+            expect(output).toBeCloseTo(-0.701, 0.001);
         });
 
         it('should mix pulse2 only', () => {
             // Pulse1 = 0, Pulse2 = 15, others = 0
             // Same as pulse1 only
             const output = mixer.mix(0, 15, 0, 0, 0);
-            expect(output).to.be.closeTo(-0.701, 0.001);
+            expect(output).toBeCloseTo(-0.701, 0.001);
         });
 
         it('should mix both pulse channels at half volume', () => {
             // Pulse1 = 8, Pulse2 = 8, others = 0
             // pulse_out = 95.88 / ((8128 / 16) + 100) ≈ 0.15768
             const output = mixer.mix(8, 8, 0, 0, 0);
-            expect(output).to.be.closeTo(-0.685, 0.001);
+            expect(output).toBeCloseTo(-0.685, 0.001);
         });
 
         it('should mix both pulse channels at maximum', () => {
             // Pulse1 = 15, Pulse2 = 15, others = 0
             // pulse_out = 95.88 / ((8128 / 30) + 100) ≈ 0.25848
             const output = mixer.mix(15, 15, 0, 0, 0);
-            expect(output).to.be.closeTo(-0.483, 0.001);
+            expect(output).toBeCloseTo(-0.483, 0.001);
         });
 
         it('should produce non-linear output (test non-linearity)', () => {
@@ -91,42 +88,42 @@ describe('ApuMixer', () => {
         it('should handle all TND channels at 0 (division by zero)', () => {
             // When tri, noise, and dmc are all 0, tnd_out should be 0
             const output = mixer.mix(0, 0, 0, 0, 0);
-            expect(output).to.equal(-1.0);
+            expect(output).toBe(-1.0);
         });
 
         it('should mix triangle only', () => {
             // Triangle = 15, others = 0
             // tnd_out = 159.79 / ((1 / (15/8227)) + 100) ≈ 0.24641
             const output = mixer.mix(0, 0, 15, 0, 0);
-            expect(output).to.be.closeTo(-0.507, 0.001);
+            expect(output).toBeCloseTo(-0.507, 0.001);
         });
 
         it('should mix noise only', () => {
             // Noise = 15, others = 0
             // tnd_out = 159.79 / ((1 / (15/12241)) + 100) ≈ 0.17443
             const output = mixer.mix(0, 0, 0, 15, 0);
-            expect(output).to.be.closeTo(-0.651, 0.001);
+            expect(output).toBeCloseTo(-0.651, 0.001);
         });
 
         it('should mix DMC only at half volume', () => {
             // DMC = 64, others = 0
             // tnd_out = 159.79 / ((1 / (64/22638)) + 100) ≈ 0.35218
             const output = mixer.mix(0, 0, 0, 0, 64);
-            expect(output).to.be.closeTo(-0.296, 0.001);
+            expect(output).toBeCloseTo(-0.296, 0.001);
         });
 
         it('should mix DMC only at maximum', () => {
             // DMC = 127, others = 0
             // tnd_out = 159.79 / ((1 / (127/22638)) + 100) ≈ 0.57426
             const output = mixer.mix(0, 0, 0, 0, 127);
-            expect(output).to.be.closeTo(0.149, 0.001);
+            expect(output).toBeCloseTo(0.149, 0.001);
         });
 
         it('should mix all TND channels together', () => {
             // Triangle = 15, Noise = 15, DMC = 127
             // tnd_out = 159.79 / ((1 / ((15/8227) + (15/12241) + (127/22638))) + 100)
             const output = mixer.mix(0, 0, 15, 15, 127);
-            expect(output).to.be.closeTo(0.483, 0.01); // Actual calculated value
+            expect(output).toBeCloseTo(0.483, 0.01); // Actual calculated value
         });
     });
 
@@ -135,8 +132,8 @@ describe('ApuMixer', () => {
             // Pulse1 = 8, Pulse2 = 8, Triangle = 8, Noise = 8, DMC = 64
             const output = mixer.mix(8, 8, 8, 8, 64);
             // Should produce a reasonable mixed output
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should mix all channels at maximum (reference value)', () => {
@@ -145,22 +142,22 @@ describe('ApuMixer', () => {
             // After normalization: 0.254 * 2 - 1 = -0.492
             // Note: Actual max might differ slightly due to formula precision
             const output = mixer.mix(15, 15, 15, 15, 127);
-            expect(output).to.be.greaterThan(0.0); // Should be positive
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(0.0); // Should be positive
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle pulse and triangle only', () => {
             // Common scenario: melody on pulse + bassline on triangle
             const output = mixer.mix(12, 10, 15, 0, 0);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle percussion scenario (noise + DMC)', () => {
             // Common scenario: drum sound using noise and DMC
             const output = mixer.mix(0, 0, 0, 15, 80);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
     });
 
@@ -193,13 +190,13 @@ describe('ApuMixer', () => {
 
         it('should produce minimum output (-1.0) when all channels silent', () => {
             const output = mixer.mix(0, 0, 0, 0, 0);
-            expect(output).to.equal(-1.0);
+            expect(output).toBe(-1.0);
         });
 
         it('should produce output close to maximum (+1.0) with all channels at max', () => {
             const output = mixer.mix(15, 15, 15, 15, 127);
             // Won't quite reach 1.0 due to the specific formulas, but should be high
-            expect(output).to.be.greaterThan(0.5);
+            expect(output).toBeGreaterThan(0.5);
             expect(output).to.be.at.most(1.0);
         });
     });
@@ -212,29 +209,29 @@ describe('ApuMixer', () => {
             const output3 = mixer.mix(8, 0, 0, 0, 0);
             
             // Volume should decrease
-            expect(output1).to.be.greaterThan(output2);
-            expect(output2).to.be.greaterThan(output3);
+            expect(output1).toBeGreaterThan(output2);
+            expect(output2).toBeGreaterThan(output3);
         });
 
         it('should handle Mega Man shooting sound (pulse + triangle)', () => {
             // Shooting: pulse + triangle
             const output = mixer.mix(10, 0, 8, 0, 0);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle explosion sound (noise)', () => {
             // Explosion: primarily noise channel
             const output = mixer.mix(0, 0, 0, 15, 0);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(0.0); // Noise alone is negative range
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(0.0); // Noise alone is negative range
         });
 
         it('should handle bass drum sound (triangle + noise)', () => {
             // Bass drum: low triangle + noise
             const output = mixer.mix(0, 0, 15, 10, 0);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle complex music (all channels active)', () => {
@@ -245,8 +242,8 @@ describe('ApuMixer', () => {
             // Noise: hi-hat at 5
             // DMC: sample at 40
             const output = mixer.mix(12, 8, 15, 5, 40);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle silence between notes', () => {
@@ -255,7 +252,7 @@ describe('ApuMixer', () => {
             const silence = mixer.mix(0, 0, 0, 0, 0);
             const note2 = mixer.mix(12, 0, 15, 0, 0);
             
-            expect(silence).to.equal(-1.0);
+            expect(silence).toBe(-1.0);
             expect(note1).to.not.equal(silence);
             expect(note2).to.not.equal(silence);
         });
@@ -264,20 +261,20 @@ describe('ApuMixer', () => {
     describe('edge cases', () => {
         it('should handle minimum non-zero values', () => {
             const output = mixer.mix(1, 1, 1, 1, 1);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle maximum pulse with minimum TND', () => {
             const output = mixer.mix(15, 15, 1, 1, 1);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should handle minimum pulse with maximum TND', () => {
             const output = mixer.mix(1, 1, 15, 15, 127);
-            expect(output).to.be.greaterThan(-1.0);
-            expect(output).to.be.lessThan(1.0);
+            expect(output).toBeGreaterThan(-1.0);
+            expect(output).toBeLessThan(1.0);
         });
 
         it('should produce different outputs for different DMC values', () => {
@@ -286,15 +283,15 @@ describe('ApuMixer', () => {
             const output2 = mixer.mix(0, 0, 0, 0, 64);
             const output3 = mixer.mix(0, 0, 0, 0, 127);
             
-            expect(output1).to.be.lessThan(output2);
-            expect(output2).to.be.lessThan(output3);
+            expect(output1).toBeLessThan(output2);
+            expect(output2).toBeLessThan(output3);
         });
 
         it('should produce consistent output for same inputs', () => {
             // Test determinism
             const output1 = mixer.mix(10, 8, 12, 7, 60);
             const output2 = mixer.mix(10, 8, 12, 7, 60);
-            expect(output1).to.equal(output2);
+            expect(output1).toBe(output2);
         });
     });
 
@@ -303,14 +300,14 @@ describe('ApuMixer', () => {
             // Pulse1=15, pulse2=15 → pulse_out ≈ 0.25848
             // After normalization: 0.25848 * 2 - 1 ≈ -0.48304
             const output = mixer.mix(15, 15, 0, 0, 0);
-            expect(output).to.be.closeTo(-0.483, 0.01);
+            expect(output).toBeCloseTo(-0.483, 0.01);
         });
 
         it('should match triangle-only reference value', () => {
             // Triangle=15 → tnd_out ≈ 0.24641
             // After normalization: 0.24641 * 2 - 1 ≈ -0.50718
             const output = mixer.mix(0, 0, 15, 0, 0);
-            expect(output).to.be.closeTo(-0.507, 0.01);
+            expect(output).toBeCloseTo(-0.507, 0.01);
         });
 
         it('should demonstrate non-linear mixing characteristic', () => {
@@ -322,7 +319,7 @@ describe('ApuMixer', () => {
             // In linear mixing: bothPulse would equal pulse1Only + pulse2Only
             // In non-linear: bothPulse > pulse1Only + pulse2Only (in the normalized -1 to 1 range)
             // Since we're in negative range, "greater" means closer to 0
-            expect(bothPulse).to.be.greaterThan(pulse1Only + pulse2Only);
+            expect(bothPulse).toBeGreaterThan(pulse1Only + pulse2Only);
         });
     });
 
@@ -336,20 +333,20 @@ describe('ApuMixer', () => {
         describe('zero values (silence)', () => {
             it('should output -1.0 when all channels are zero', () => {
                 const output = mixer.mix(0, 0, 0, 0, 0);
-                expect(output).to.equal(-1.0);
+                expect(output).toBe(-1.0);
             });
 
             it('should output -1.0 when pulse channels zero with active TND', () => {
                 // pulse_out = 0, tnd_out > 0, but total is (0 + tnd) * 2 - 1
                 const output = mixer.mix(0, 0, 15, 15, 127);
                 // tnd_out ≈ 0.74161, so (0 + 0.74161) * 2 - 1 ≈ 0.483
-                expect(output).to.be.greaterThan(-1.0);
+                expect(output).toBeGreaterThan(-1.0);
             });
 
             it('should output -1.0 when TND channels zero with active pulse', () => {
                 const output = mixer.mix(15, 15, 0, 0, 0);
                 // pulse_out ≈ 0.25848, so (0.25848 + 0) * 2 - 1 ≈ -0.483
-                expect(output).to.be.greaterThan(-1.0);
+                expect(output).toBeGreaterThan(-1.0);
             });
         });
 
@@ -359,7 +356,7 @@ describe('ApuMixer', () => {
                 // pulse_out = 95.88 / (271.0 + 100) = 95.88 / 371.0 ≈ 0.25848
                 // Normalized: 0.25848 * 2 - 1 ≈ -0.48304
                 const output = mixer.mix(15, 15, 0, 0, 0);
-                expect(output).to.be.closeTo(-0.483, 0.001);
+                expect(output).toBeCloseTo(-0.483, 0.001);
             });
 
             it('should output maximum for triangle channel (15)', () => {
@@ -367,7 +364,7 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / ((8227/15) + 100) = 159.79 / 648.47 ≈ 0.24641
                 // Normalized: 0.24641 * 2 - 1 ≈ -0.50718
                 const output = mixer.mix(0, 0, 15, 0, 0);
-                expect(output).to.be.closeTo(-0.507, 0.001);
+                expect(output).toBeCloseTo(-0.507, 0.001);
             });
 
             it('should output maximum for noise channel (15)', () => {
@@ -375,7 +372,7 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / ((12241/15) + 100) ≈ 0.17443
                 // Normalized: 0.17443 * 2 - 1 ≈ -0.65114
                 const output = mixer.mix(0, 0, 0, 15, 0);
-                expect(output).to.be.closeTo(-0.651, 0.001);
+                expect(output).toBeCloseTo(-0.651, 0.001);
             });
 
             it('should output maximum for DMC channel (127)', () => {
@@ -383,7 +380,7 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / ((22638/127) + 100) ≈ 0.57426
                 // Normalized: 0.57426 * 2 - 1 ≈ 0.14852
                 const output = mixer.mix(0, 0, 0, 0, 127);
-                expect(output).to.be.closeTo(0.149, 0.001);
+                expect(output).toBeCloseTo(0.149, 0.001);
             });
 
             it('should output near maximum with all channels at max', () => {
@@ -394,7 +391,7 @@ describe('ApuMixer', () => {
                 // total = 0.25848 + 0.74161 = 1.00009
                 // Normalized: 1.00009 * 2 - 1 ≈ 1.00018 (clamped to 1.0 or very close)
                 const output = mixer.mix(15, 15, 15, 15, 127);
-                expect(output).to.be.greaterThan(0.9);
+                expect(output).toBeGreaterThan(0.9);
                 expect(output).to.be.at.most(1.0);
             });
         });
@@ -405,7 +402,7 @@ describe('ApuMixer', () => {
                 // pulse_out = 95.88 / (541.87 + 100) ≈ 0.14938
                 // Normalized: 0.14938 * 2 - 1 ≈ -0.70124
                 const output = mixer.mix(10, 5, 0, 0, 0);
-                expect(output).to.be.closeTo(-0.701, 0.001);
+                expect(output).toBeCloseTo(-0.701, 0.001);
             });
 
             it('should correctly mix triangle=10, noise=10, dmc=64', () => {
@@ -414,7 +411,7 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / (205.76 + 100) ≈ 0.5226
                 // Normalized: 0.5226 * 2 - 1 ≈ 0.0452
                 const output = mixer.mix(0, 0, 10, 10, 64);
-                expect(output).to.be.closeTo(0.045, 0.01);
+                expect(output).toBeCloseTo(0.045, 0.01);
             });
 
             it('should correctly mix balanced configuration', () => {
@@ -423,7 +420,7 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / ((1 / (8/8227 + 8/12241 + 64/22638)) + 100) ≈ 0.4921
                 // total ≈ 0.64978, Normalized: ≈ 0.29956
                 const output = mixer.mix(8, 8, 8, 8, 64);
-                expect(output).to.be.closeTo(0.3, 0.01);
+                expect(output).toBeCloseTo(0.3, 0.01);
             });
 
             it('should correctly mix single pulse value of 1', () => {
@@ -431,7 +428,7 @@ describe('ApuMixer', () => {
                 // pulse_out = 95.88 / 8228 ≈ 0.01165
                 // Normalized: 0.01165 * 2 - 1 ≈ -0.9767
                 const output = mixer.mix(1, 0, 0, 0, 0);
-                expect(output).to.be.closeTo(-0.977, 0.001);
+                expect(output).toBeCloseTo(-0.977, 0.001);
             });
 
             it('should correctly mix single DMC value of 1', () => {
@@ -439,34 +436,34 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / (22638 + 100) ≈ 0.00703
                 // Normalized: 0.00703 * 2 - 1 ≈ -0.98594
                 const output = mixer.mix(0, 0, 0, 0, 1);
-                expect(output).to.be.closeTo(-0.986, 0.001);
+                expect(output).toBeCloseTo(-0.986, 0.001);
             });
         });
 
         describe('edge cases - single channel active vs all channels active', () => {
             it('should handle only pulse1 active at value 15', () => {
                 const output = mixer.mix(15, 0, 0, 0, 0);
-                expect(output).to.be.closeTo(-0.701, 0.001);
+                expect(output).toBeCloseTo(-0.701, 0.001);
             });
 
             it('should handle only pulse2 active at value 15', () => {
                 const output = mixer.mix(0, 15, 0, 0, 0);
-                expect(output).to.be.closeTo(-0.701, 0.001);
+                expect(output).toBeCloseTo(-0.701, 0.001);
             });
 
             it('should handle only triangle active at value 15', () => {
                 const output = mixer.mix(0, 0, 15, 0, 0);
-                expect(output).to.be.closeTo(-0.507, 0.001);
+                expect(output).toBeCloseTo(-0.507, 0.001);
             });
 
             it('should handle only noise active at value 15', () => {
                 const output = mixer.mix(0, 0, 0, 15, 0);
-                expect(output).to.be.closeTo(-0.651, 0.001);
+                expect(output).toBeCloseTo(-0.651, 0.001);
             });
 
             it('should handle only DMC active at value 127', () => {
                 const output = mixer.mix(0, 0, 0, 0, 127);
-                expect(output).to.be.closeTo(0.149, 0.001);
+                expect(output).toBeCloseTo(0.149, 0.001);
             });
 
             it('should handle all channels active producing higher output than any single channel', () => {
@@ -477,17 +474,17 @@ describe('ApuMixer', () => {
                 const allActive = mixer.mix(15, 15, 15, 15, 127);
                 
                 // All channels active should produce the highest output
-                expect(allActive).to.be.greaterThan(singlePulse);
-                expect(allActive).to.be.greaterThan(singleTri);
-                expect(allActive).to.be.greaterThan(singleNoise);
-                expect(allActive).to.be.greaterThan(singleDmc);
+                expect(allActive).toBeGreaterThan(singlePulse);
+                expect(allActive).toBeGreaterThan(singleTri);
+                expect(allActive).toBeGreaterThan(singleNoise);
+                expect(allActive).toBeGreaterThan(singleDmc);
             });
         });
 
         describe('output range normalization [-1.0, +1.0]', () => {
             it('should guarantee minimum output is -1.0', () => {
                 const output = mixer.mix(0, 0, 0, 0, 0);
-                expect(output).to.equal(-1.0);
+                expect(output).toBe(-1.0);
                 expect(output).to.be.at.least(-1.0);
             });
 
@@ -515,15 +512,15 @@ describe('ApuMixer', () => {
 
             it('should verify output formula: (pulse_out + tnd_out) * 2 - 1', () => {
                 // For silence: (0 + 0) * 2 - 1 = -1
-                expect(mixer.mix(0, 0, 0, 0, 0)).to.equal(-1.0);
+                expect(mixer.mix(0, 0, 0, 0, 0)).toBe(-1.0);
                 
                 // For max pulse only: pulse_out ≈ 0.25848
                 // (0.25848 + 0) * 2 - 1 = -0.48304
-                expect(mixer.mix(15, 15, 0, 0, 0)).to.be.closeTo(-0.483, 0.001);
+                expect(mixer.mix(15, 15, 0, 0, 0)).toBeCloseTo(-0.483, 0.001);
                 
                 // For max DMC only: tnd_out ≈ 0.57426
                 // (0 + 0.57426) * 2 - 1 = 0.14852
-                expect(mixer.mix(0, 0, 0, 0, 127)).to.be.closeTo(0.149, 0.001);
+                expect(mixer.mix(0, 0, 0, 0, 127)).toBeCloseTo(0.149, 0.001);
             });
 
             it('should maintain precision for very small non-zero values', () => {
@@ -532,8 +529,8 @@ describe('ApuMixer', () => {
                 // tnd_out = 159.79 / ((1 / (1/8227 + 1/12241 + 1/22638)) + 100) ≈ 0.0386
                 // total = (0.0232 + 0.0386) * 2 - 1 ≈ -0.8764
                 // Should be slightly above -1.0 but still well below 0
-                expect(output).to.be.greaterThan(-1.0);
-                expect(output).to.be.lessThan(-0.8);
+                expect(output).toBeGreaterThan(-1.0);
+                expect(output).toBeLessThan(-0.8);
             });
         });
     });

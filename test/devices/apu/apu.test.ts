@@ -1,7 +1,4 @@
-import chai from "chai";
-import { Apu2A03 } from '../../../lib/devices/apu.js';
-
-const expect = chai.expect;
+import { Apu2A03 } from '../../../src/devices/apu.js';
 
 /**
  * Apu2A03 Unit Tests
@@ -23,7 +20,7 @@ describe('Apu2A03', () => {
 
     describe('initialization', () => {
         it('should construct an APU', () => {
-            expect(apu).to.be.instanceOf(Apu2A03);
+            expect(apu).toBeInstanceOf(Apu2A03);
         });
 
         it('should initialize with all channels created', () => {
@@ -38,22 +35,22 @@ describe('Apu2A03', () => {
             const status = apu.read(0x15);
             
             // Bits 0-1 should be set (pulse channels have length > 0)
-            expect(status & 0x01).to.equal(0x01); // Pulse 1 active
-            expect(status & 0x02).to.equal(0x02); // Pulse 2 active
+            expect(status & 0x01).toBe(0x01); // Pulse 1 active
+            expect(status & 0x02).toBe(0x02); // Pulse 2 active
         });
 
         it('should initialize with all channels disabled', () => {
             const status = apu.read(0x15);
             
             // All channel status bits should be 0
-            expect(status & 0x1F).to.equal(0);
+            expect(status & 0x1F).toBe(0);
         });
 
         it('should initialize with no interrupts', () => {
             const status = apu.read(0x15);
             
             // Interrupt flags (bits 6-7) should be 0
-            expect(status & 0xC0).to.equal(0);
+            expect(status & 0xC0).toBe(0);
         });
 
         it('should initialize frame counter', () => {
@@ -92,7 +89,7 @@ describe('Apu2A03', () => {
                 
                 // Verify length counter was loaded
                 const status = apu.read(0x15);
-                expect(status & 0x01).to.equal(0x01);
+                expect(status & 0x01).toBe(0x01);
             });
         });
 
@@ -104,7 +101,7 @@ describe('Apu2A03', () => {
                 
                 // Verify by checking status
                 const status = apu.read(0x15);
-                expect(status & 0x02).to.equal(0x02);
+                expect(status & 0x02).toBe(0x02);
             });
 
             it('should route $4005 to Pulse 2 sweep register', () => {
@@ -121,7 +118,7 @@ describe('Apu2A03', () => {
                 apu.write(0x07, 0x08);
                 
                 const status = apu.read(0x15);
-                expect(status & 0x02).to.equal(0x02);
+                expect(status & 0x02).toBe(0x02);
             });
         });
 
@@ -222,7 +219,7 @@ describe('Apu2A03', () => {
                 apu.write(0x03, 0x08); // Load length counter
                 
                 const status = apu.read(0x15);
-                expect(status & 0x01).to.equal(0x01);
+                expect(status & 0x01).toBe(0x01);
             });
 
             it('should enable Pulse 2 when bit 1 is set', () => {
@@ -230,7 +227,7 @@ describe('Apu2A03', () => {
                 apu.write(0x07, 0x08); // Load length counter
                 
                 const status = apu.read(0x15);
-                expect(status & 0x02).to.equal(0x02);
+                expect(status & 0x02).toBe(0x02);
             });
 
             it('should enable Triangle when bit 2 is set', () => {
@@ -254,7 +251,7 @@ describe('Apu2A03', () => {
                 apu.write(0x07, 0x08); // Load Pulse 2 length
                 
                 const status = apu.read(0x15);
-                expect(status & 0x03).to.equal(0x03); // Both pulses active
+                expect(status & 0x03).toBe(0x03); // Both pulses active
             });
         });
 
@@ -268,23 +265,23 @@ describe('Apu2A03', () => {
 
             it('should disable and clear Pulse 1 length counter when bit 0 is clear', () => {
                 const before = apu.read(0x15);
-                expect(before & 0x01).to.equal(0x01); // Pulse 1 active
+                expect(before & 0x01).toBe(0x01); // Pulse 1 active
                 
                 apu.write(0x15, 0x1E); // Clear bit 0, keep others
                 
                 const after = apu.read(0x15);
-                expect(after & 0x01).to.equal(0x00); // Pulse 1 inactive
+                expect(after & 0x01).toBe(0x00); // Pulse 1 inactive
             });
 
             it('should disable and clear Pulse 2 length counter when bit 1 is clear', () => {
                 const before = apu.read(0x15);
-                expect(before & 0x02).to.equal(0x02); // Pulse 2 active
+                expect(before & 0x02).toBe(0x02); // Pulse 2 active
                 
                 apu.write(0x15, 0x1D); // Clear bit 1, keep others
                 
                 const after = apu.read(0x15);
-                expect(after & 0x01).to.equal(0x01); // Pulse 1 still active
-                expect(after & 0x02).to.equal(0x00); // Pulse 2 inactive
+                expect(after & 0x01).toBe(0x01); // Pulse 1 still active
+                expect(after & 0x02).toBe(0x00); // Pulse 2 inactive
             });
 
             it('should clear Triangle length counter when bit 2 is clear', () => {
@@ -312,7 +309,7 @@ describe('Apu2A03', () => {
                 apu.write(0x15, 0x00);
                 
                 const status = apu.read(0x15);
-                expect(status & 0x1F).to.equal(0x00);
+                expect(status & 0x1F).toBe(0x00);
             });
         });
 
@@ -321,12 +318,12 @@ describe('Apu2A03', () => {
                 apu.write(0x15, 0x01); // Enable Pulse 1
                 apu.write(0x03, 0x08); // Load length counter
                 
-                expect(apu.read(0x15) & 0x01).to.equal(0x01);
+                expect(apu.read(0x15) & 0x01).toBe(0x01);
                 
                 apu.write(0x15, 0x00); // Disable
                 
                 // Length counter should be immediately 0
-                expect(apu.read(0x15) & 0x01).to.equal(0x00);
+                expect(apu.read(0x15) & 0x01).toBe(0x00);
             });
 
             // Note: DMC restart quirk test requires DMC implementation
@@ -345,7 +342,7 @@ describe('Apu2A03', () => {
                 
                 // DMC interrupt should be clear
                 const status = apu.read(0x15);
-                expect(status & 0x80).to.equal(0x00);
+                expect(status & 0x80).toBe(0x00);
             });
         });
     });
@@ -360,28 +357,28 @@ describe('Apu2A03', () => {
                 apu.write(0x03, 0x08); // Load Pulse 1 length
                 
                 const status = apu.read(0x15);
-                expect(status & 0x01).to.equal(0x01);
+                expect(status & 0x01).toBe(0x01);
             });
 
             it('should clear bit 0 when Pulse 1 length counter = 0', () => {
                 apu.write(0x15, 0x00); // Disable (clears length)
                 
                 const status = apu.read(0x15);
-                expect(status & 0x01).to.equal(0x00);
+                expect(status & 0x01).toBe(0x00);
             });
 
             it('should set bit 1 when Pulse 2 length counter > 0', () => {
                 apu.write(0x07, 0x08); // Load Pulse 2 length
                 
                 const status = apu.read(0x15);
-                expect(status & 0x02).to.equal(0x02);
+                expect(status & 0x02).toBe(0x02);
             });
 
             it('should clear bit 1 when Pulse 2 length counter = 0', () => {
                 apu.write(0x15, 0x00); // Disable
                 
                 const status = apu.read(0x15);
-                expect(status & 0x02).to.equal(0x00);
+                expect(status & 0x02).toBe(0x00);
             });
 
             it('should reflect bit 2 for Triangle length counter', () => {
@@ -407,7 +404,7 @@ describe('Apu2A03', () => {
                 apu.write(0x07, 0x08); // Pulse 2
                 
                 const status = apu.read(0x15);
-                expect(status & 0x03).to.equal(0x03);
+                expect(status & 0x03).toBe(0x03);
             });
         });
 
@@ -438,7 +435,7 @@ describe('Apu2A03', () => {
                 const status = apu.read(0x15); // Second read
                 
                 // Frame interrupt should be clear
-                expect(status & 0x40).to.equal(0x00);
+                expect(status & 0x40).toBe(0x00);
             });
 
             it('should NOT clear DMC interrupt flag when reading', () => {
@@ -449,7 +446,7 @@ describe('Apu2A03', () => {
                 const status = apu.read(0x15);
                 
                 // DMC interrupt flag unchanged by read
-                expect(status & 0x80).to.equal(0x00);
+                expect(status & 0x80).toBe(0x00);
             });
 
             it('should clear frame interrupt on every read', () => {
@@ -459,7 +456,7 @@ describe('Apu2A03', () => {
                 apu.read(0x15);
                 
                 const status = apu.read(0x15);
-                expect(status & 0x40).to.equal(0x00);
+                expect(status & 0x40).toBe(0x00);
             });
         });
 
@@ -470,13 +467,13 @@ describe('Apu2A03', () => {
                 
                 // Read returns last written value (approximates open bus)
                 const value = apu.read(0x00);
-                expect(value).to.equal(0xAB);
+                expect(value).toBe(0xAB);
             });
 
             it('should return 0 for unwritten registers', () => {
                 // Read from register that hasn't been written
                 const value = apu.read(0x01);
-                expect(value).to.equal(0x00);
+                expect(value).toBe(0x00);
             });
 
             it('should track separate values for each register', () => {
@@ -484,9 +481,9 @@ describe('Apu2A03', () => {
                 apu.write(0x01, 0x22);
                 apu.write(0x02, 0x33);
                 
-                expect(apu.read(0x00)).to.equal(0x11);
-                expect(apu.read(0x01)).to.equal(0x22);
-                expect(apu.read(0x02)).to.equal(0x33);
+                expect(apu.read(0x00)).toBe(0x11);
+                expect(apu.read(0x01)).toBe(0x22);
+                expect(apu.read(0x02)).toBe(0x33);
             });
         });
     });
@@ -505,14 +502,14 @@ describe('Apu2A03', () => {
             
             const status = apu.read(0x15);
             // Frame interrupt should be clear
-            expect(status & 0x40).to.equal(0x00);
+            expect(status & 0x40).toBe(0x00);
         });
 
         it('should clear frame interrupt even with other bits', () => {
             apu.write(0x17, 0xC0); // 5-step mode + IRQ inhibit
             
             const status = apu.read(0x15);
-            expect(status & 0x40).to.equal(0x00);
+            expect(status & 0x40).toBe(0x00);
         });
 
         it('should not clear frame interrupt when IRQ inhibit is not set', () => {
@@ -574,22 +571,22 @@ describe('Apu2A03', () => {
             apu.reset();
             
             // Check that registers are cleared
-            expect(apu.read(0x00)).to.equal(0x00);
-            expect(apu.read(0x01)).to.equal(0x00);
+            expect(apu.read(0x00)).toBe(0x00);
+            expect(apu.read(0x01)).toBe(0x00);
         });
 
         it('should disable all channels on reset', () => {
             apu.reset();
             
             const status = apu.read(0x15);
-            expect(status & 0x1F).to.equal(0x00);
+            expect(status & 0x1F).toBe(0x00);
         });
 
         it('should clear interrupt flags on reset', () => {
             apu.reset();
             
             const status = apu.read(0x15);
-            expect(status & 0xC0).to.equal(0x00);
+            expect(status & 0xC0).toBe(0x00);
         });
 
         it('should reset pulse channels', () => {
@@ -599,7 +596,7 @@ describe('Apu2A03', () => {
             apu.reset();
             
             const afterStatus = apu.read(0x15);
-            expect(afterStatus & 0x03).to.equal(0x00); // Channels now inactive
+            expect(afterStatus & 0x03).toBe(0x00); // Channels now inactive
         });
 
         it('should reset frame counter', () => {
@@ -610,7 +607,7 @@ describe('Apu2A03', () => {
             // Frame counter should be reset to default
             // (4-step mode, IRQ enabled)
             const status = apu.read(0x15);
-            expect(status & 0x40).to.equal(0x00); // Frame interrupt clear
+            expect(status & 0x40).toBe(0x00); // Frame interrupt clear
         });
 
         it('should allow normal operation after reset', () => {
@@ -621,7 +618,7 @@ describe('Apu2A03', () => {
             apu.write(0x03, 0x08);
             
             const status = apu.read(0x15);
-            expect(status & 0x01).to.equal(0x01);
+            expect(status & 0x01).toBe(0x01);
         });
 
         it('should be idempotent (multiple resets safe)', () => {
@@ -630,7 +627,7 @@ describe('Apu2A03', () => {
             apu.reset();
             
             const status = apu.read(0x15);
-            expect(status).to.equal(0x00);
+            expect(status).toBe(0x00);
         });
     });
 
@@ -649,9 +646,9 @@ describe('Apu2A03', () => {
             apu.write(0x04, 0xBB);
             apu.write(0x08, 0xCC);
             
-            expect(apu.read(0x00)).to.equal(0xAA);
-            expect(apu.read(0x04)).to.equal(0xBB);
-            expect(apu.read(0x08)).to.equal(0xCC);
+            expect(apu.read(0x00)).toBe(0xAA);
+            expect(apu.read(0x04)).toBe(0xBB);
+            expect(apu.read(0x08)).toBe(0xCC);
         });
 
         it('should handle concurrent channel operations', () => {
@@ -702,7 +699,7 @@ describe('Apu2A03', () => {
                 const status3 = apu.read(0x15);
                 
                 // Frame interrupt flag should remain clear (bit 6)
-                expect(status3 & 0x40).to.equal(0x00);
+                expect(status3 & 0x40).toBe(0x00);
             });
 
             it('should clear frame interrupt on EVERY read of $4015', () => {
@@ -711,7 +708,7 @@ describe('Apu2A03', () => {
                 for (let i = 0; i < 10; i++) {
                     const status = apu.read(0x15);
                     // Frame interrupt should always be clear after read
-                    expect(status & 0x40).to.equal(0x00, `Read ${i}: frame interrupt should be clear`);
+                    expect(status & 0x40).toBe(0x00, `Read ${i}: frame interrupt should be clear`);
                 }
             });
 
@@ -723,13 +720,13 @@ describe('Apu2A03', () => {
                 
                 // DMC interrupt flag (bit 7) behavior is independent of reads
                 // It should remain in its current state (clear in this case because we haven't set it)
-                expect(status & 0x80).to.equal(0x00);
+                expect(status & 0x80).toBe(0x00);
                 
                 // Multiple reads should not affect DMC interrupt
                 apu.read(0x15);
                 apu.read(0x15);
                 const finalStatus = apu.read(0x15);
-                expect(finalStatus & 0x80).to.equal(0x00);
+                expect(finalStatus & 0x80).toBe(0x00);
             });
 
             it('should clear frame interrupt independently of other status bits', () => {
@@ -740,13 +737,13 @@ describe('Apu2A03', () => {
                 
                 // Read status - should have channel bits set
                 const status = apu.read(0x15);
-                expect(status & 0x03).to.equal(0x03); // Pulse 1 and 2 active
-                expect(status & 0x40).to.equal(0x00); // Frame interrupt clear
+                expect(status & 0x03).toBe(0x03); // Pulse 1 and 2 active
+                expect(status & 0x40).toBe(0x00); // Frame interrupt clear
                 
                 // Channel status should persist across multiple reads
                 const status2 = apu.read(0x15);
-                expect(status2 & 0x03).to.equal(0x03); // Channels still active
-                expect(status2 & 0x40).to.equal(0x00); // Frame interrupt still clear
+                expect(status2 & 0x03).toBe(0x03); // Channels still active
+                expect(status2 & 0x40).toBe(0x00); // Frame interrupt still clear
             });
 
             it('should implement the side effect correctly in readStatus method', () => {
@@ -759,7 +756,7 @@ describe('Apu2A03', () => {
                 const finalStatus = apu.read(0x15);
                 
                 // Frame interrupt should consistently be clear
-                expect(finalStatus & 0x40).to.equal(0x00);
+                expect(finalStatus & 0x40).toBe(0x00);
             });
 
             it('should handle rapid successive reads correctly', () => {
@@ -773,7 +770,7 @@ describe('Apu2A03', () => {
                 }
                 
                 // All reads should have frame interrupt clear
-                expect(results.every(r => r === true)).to.equal(true);
+                expect(results.every(r => r === true)).toBe(true);
             });
         });
 
@@ -784,25 +781,25 @@ describe('Apu2A03', () => {
                 apu.write(0x03, 0xF8); // Load length counter (index 31 = value 30)
                 
                 // Verify length counter is loaded
-                expect(apu.read(0x15) & 0x01).to.equal(0x01);
+                expect(apu.read(0x15) & 0x01).toBe(0x01);
                 
                 // Disable Pulse 1 by writing 0 to bit 0
                 apu.write(0x15, 0x00);
                 
                 // Length counter should be immediately 0
-                expect(apu.read(0x15) & 0x01).to.equal(0x00);
+                expect(apu.read(0x15) & 0x01).toBe(0x00);
             });
 
             it('should immediately zero Pulse 2 length counter when disabling via $4015', () => {
                 apu.write(0x15, 0x02); // Enable Pulse 2
                 apu.write(0x07, 0xF8); // Load length counter
                 
-                expect(apu.read(0x15) & 0x02).to.equal(0x02);
+                expect(apu.read(0x15) & 0x02).toBe(0x02);
                 
                 // Disable Pulse 2
                 apu.write(0x15, 0x00);
                 
-                expect(apu.read(0x15) & 0x02).to.equal(0x00);
+                expect(apu.read(0x15) & 0x02).toBe(0x00);
             });
 
             it('should immediately zero Triangle length counter when disabling via $4015', () => {
@@ -810,24 +807,24 @@ describe('Apu2A03', () => {
                 apu.write(0x08, 0xFF); // Set control/linear counter
                 apu.write(0x0B, 0xF8); // Load length counter
                 
-                expect(apu.read(0x15) & 0x04).to.equal(0x04);
+                expect(apu.read(0x15) & 0x04).toBe(0x04);
                 
                 // Disable Triangle
                 apu.write(0x15, 0x00);
                 
-                expect(apu.read(0x15) & 0x04).to.equal(0x00);
+                expect(apu.read(0x15) & 0x04).toBe(0x00);
             });
 
             it('should immediately zero Noise length counter when disabling via $4015', () => {
                 apu.write(0x15, 0x08); // Enable Noise
                 apu.write(0x0F, 0xF8); // Load length counter
                 
-                expect(apu.read(0x15) & 0x08).to.equal(0x08);
+                expect(apu.read(0x15) & 0x08).toBe(0x08);
                 
                 // Disable Noise
                 apu.write(0x15, 0x00);
                 
-                expect(apu.read(0x15) & 0x08).to.equal(0x00);
+                expect(apu.read(0x15) & 0x08).toBe(0x00);
             });
 
             it('should selectively zero length counters based on enable bits', () => {
@@ -839,16 +836,16 @@ describe('Apu2A03', () => {
                 apu.write(0x0F, 0xF8); // Noise
                 
                 // All channels active
-                expect(apu.read(0x15) & 0x0F).to.equal(0x0F);
+                expect(apu.read(0x15) & 0x0F).toBe(0x0F);
                 
                 // Disable only Pulse 1 and Triangle (bits 0 and 2)
                 apu.write(0x15, 0x0A); // Keep Pulse 2 and Noise (bits 1 and 3)
                 
                 const status = apu.read(0x15);
-                expect(status & 0x01).to.equal(0x00); // Pulse 1 disabled
-                expect(status & 0x02).to.equal(0x02); // Pulse 2 still active
-                expect(status & 0x04).to.equal(0x00); // Triangle disabled
-                expect(status & 0x08).to.equal(0x08); // Noise still active
+                expect(status & 0x01).toBe(0x00); // Pulse 1 disabled
+                expect(status & 0x02).toBe(0x02); // Pulse 2 still active
+                expect(status & 0x04).toBe(0x00); // Triangle disabled
+                expect(status & 0x08).toBe(0x08); // Noise still active
             });
 
             it('should zero length counter immediately, not on next frame', () => {
@@ -856,35 +853,35 @@ describe('Apu2A03', () => {
                 apu.write(0x15, 0x01); // Enable Pulse 1
                 apu.write(0x03, 0xF8); // Load length counter
                 
-                expect(apu.read(0x15) & 0x01).to.equal(0x01);
+                expect(apu.read(0x15) & 0x01).toBe(0x01);
                 
                 // Disable - length counter should zero immediately
                 apu.write(0x15, 0x00);
                 
                 // Check immediately - don't clock anything
-                expect(apu.read(0x15) & 0x01).to.equal(0x00);
+                expect(apu.read(0x15) & 0x01).toBe(0x00);
                 
                 // Even after clocking, it should still be 0
                 apu.clock();
-                expect(apu.read(0x15) & 0x01).to.equal(0x00);
+                expect(apu.read(0x15) & 0x01).toBe(0x00);
             });
 
             it('should allow re-enabling and reloading length counter after disable', () => {
                 // Disable/enable cycle should work correctly
                 apu.write(0x15, 0x01); // Enable Pulse 1
                 apu.write(0x03, 0xF8); // Load length counter
-                expect(apu.read(0x15) & 0x01).to.equal(0x01);
+                expect(apu.read(0x15) & 0x01).toBe(0x01);
                 
                 // Disable
                 apu.write(0x15, 0x00);
-                expect(apu.read(0x15) & 0x01).to.equal(0x00);
+                expect(apu.read(0x15) & 0x01).toBe(0x00);
                 
                 // Re-enable
                 apu.write(0x15, 0x01);
                 apu.write(0x03, 0xF8); // Load length counter again
                 
                 // Length counter should be loaded again
-                expect(apu.read(0x15) & 0x01).to.equal(0x01);
+                expect(apu.read(0x15) & 0x01).toBe(0x01);
             });
         });
     });

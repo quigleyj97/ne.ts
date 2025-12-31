@@ -17,7 +17,7 @@
         }
     </style>
     <script type="module">
-        import { NesEmulator, CartridgeMapperFactory, ControllerButton, dump_nametable, dump_palettes, dump_chr } from "../lib/index.js";
+        import { NesEmulator, CartridgeMapperFactory, ControllerButton, dump_nametable, dump_palettes, dump_chr } from "../src/index.ts";
 
         function rgb8_to_imagedata(buf, width, height) {
             const imgdata = new ImageData(width, height);
@@ -71,13 +71,37 @@
                 const buf = emu.debug_frame();
                 setOutputs(buf);
             });
-            document.getElementById("run-emulator").addEventListener("click", () => {
+            document.getElementById("run-emulator").addEventListener("click", async () => {
                 if (play) return;
+                // Try to enable audio on user gesture (required by browsers)
+                if (emu && typeof emu.enableAudio === 'function') {
+                    try {
+                        await emu.enableAudio();
+                    } catch (e) {
+                        console.warn("Could not enable audio:", e);
+                    }
+                }
                 play = true;
                 requestAnimationFrame(run_frame);
             });
             document.getElementById("stop-emulator").addEventListener("click", () => {
                 play = false;
+            });
+            document.getElementById("enable-audio").addEventListener("click", async () => {
+                if (emu && typeof emu.enableAudio === 'function') {
+                    try {
+                        await emu.enableAudio();
+                        console.log("Audio enabled");
+                    } catch (e) {
+                        console.warn("Could not enable audio:", e);
+                    }
+                }
+            });
+            document.getElementById("disable-audio").addEventListener("click", () => {
+                if (emu && typeof emu.disableAudio === 'function') {
+                    emu.disableAudio();
+                    console.log("Audio disabled");
+                }
             });
 
             function mapKeyToButton(key) {
@@ -156,6 +180,11 @@
                 <legend>Play</legend>
                 <button id="run-emulator" title="Run the emulator at full speed">▶️</button>
                 <button id="stop-emulator" title="Stop the emulator">⏸</button>
+            </fieldset>
+            <fieldset style="display: inline-block">
+                <legend>Audio</legend>
+                <button id="enable-audio" title="Enable audio output">🔊 Enable Audio</button>
+                <button id="disable-audio" title="Mute audio output">🔇 Mute</button>
             </fieldset>
         </span>
         <fieldset>

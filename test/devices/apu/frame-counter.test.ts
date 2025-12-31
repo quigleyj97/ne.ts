@@ -1,7 +1,4 @@
-import chai from "chai";
-import { FrameCounter } from '../../../lib/devices/apu/units/frame-counter.js';
-
-const expect = chai.expect;
+import { FrameCounter } from '../../../src/devices/apu/units/frame-counter.js';
 
 /**
  * FrameCounter Unit Tests
@@ -21,17 +18,17 @@ describe('FrameCounter', () => {
 
     describe('Construction and Reset', () => {
         it('should construct successfully', () => {
-            expect(fc).to.be.instanceOf(FrameCounter);
+            expect(fc).toBeInstanceOf(FrameCounter);
         });
 
         it('should start with no IRQ pending', () => {
-            expect(fc.isIrqPending()).to.equal(false);
+            expect(fc.isIrqPending()).toBe(false);
         });
 
         it('should reset to initial state', () => {
             fc.writeControl(0xC0, 0); // Set mode and IRQ inhibit
             fc.reset();
-            expect(fc.isIrqPending()).to.equal(false);
+            expect(fc.isIrqPending()).toBe(false);
         });
     });
 
@@ -52,10 +49,10 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 7459; cycle++) {
                 events = fc.clock(cycle);
                 if (cycle === 7459) {
-                    expect(events.quarterFrame).to.equal(true, 'Quarter-frame at 7459');
-                    expect(events.halfFrame).to.equal(false, 'No half-frame at step 1');
+                    expect(events.quarterFrame).toBe(true, 'Quarter-frame at 7459');
+                    expect(events.halfFrame).toBe(false, 'No half-frame at step 1');
                 } else if (cycle > 4) {
-                    expect(events.quarterFrame).to.equal(false, `No quarter-frame at ${cycle}`);
+                    expect(events.quarterFrame).toBe(false, `No quarter-frame at ${cycle}`);
                 }
             }
         });
@@ -65,8 +62,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 14913; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true, 'Quarter-frame at 14913');
-            expect(events.halfFrame).to.equal(true, 'Half-frame at 14913');
+            expect(events.quarterFrame).toBe(true, 'Quarter-frame at 14913');
+            expect(events.halfFrame).toBe(true, 'Half-frame at 14913');
         });
 
         it('should generate quarter-frame at step 3 (cycle 22371)', () => {
@@ -74,8 +71,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 22371; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true, 'Quarter-frame at 22371');
-            expect(events.halfFrame).to.equal(false, 'No half-frame at step 3');
+            expect(events.quarterFrame).toBe(true, 'Quarter-frame at 22371');
+            expect(events.halfFrame).toBe(false, 'No half-frame at step 3');
         });
 
         it('should generate quarter-frame and half-frame at step 4 (cycle 29829)', () => {
@@ -83,8 +80,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 29829; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true, 'Quarter-frame at 29829');
-            expect(events.halfFrame).to.equal(true, 'Half-frame at 29829');
+            expect(events.quarterFrame).toBe(true, 'Quarter-frame at 29829');
+            expect(events.halfFrame).toBe(true, 'Half-frame at 29829');
         });
 
         it('should reset sequence after step 4', () => {
@@ -99,8 +96,8 @@ describe('FrameCounter', () => {
                 events = fc.clock(cycle);
             }
             // Should generate quarter-frame at the first step again
-            expect(events.quarterFrame).to.equal(true, 'Quarter-frame after reset');
-            expect(events.halfFrame).to.equal(false, 'No half-frame at step 1');
+            expect(events.quarterFrame).toBe(true, 'Quarter-frame after reset');
+            expect(events.halfFrame).toBe(false, 'No half-frame at step 1');
         });
 
         it('should not have step 5 in 4-step mode', () => {
@@ -110,8 +107,8 @@ describe('FrameCounter', () => {
                 events = fc.clock(cycle);
                 // Step 5 would be at 37281 - should have no events there
                 if (cycle === 37281) {
-                    expect(events.quarterFrame).to.equal(false, 'No quarter-frame at cycle 37281');
-                    expect(events.halfFrame).to.equal(false, 'No half-frame at cycle 37281');
+                    expect(events.quarterFrame).toBe(false, 'No quarter-frame at cycle 37281');
+                    expect(events.halfFrame).toBe(false, 'No half-frame at cycle 37281');
                 }
             }
         });
@@ -140,8 +137,8 @@ describe('FrameCounter', () => {
             }
             
             // Should have immediate events after delay
-            expect(events.quarterFrame).to.equal(true, 'Immediate quarter-frame');
-            expect(events.halfFrame).to.equal(true, 'Immediate half-frame');
+            expect(events.quarterFrame).toBe(true, 'Immediate quarter-frame');
+            expect(events.halfFrame).toBe(true, 'Immediate half-frame');
         });
 
         it('should generate quarter-frame at step 1 (cycle 7459)', () => {
@@ -149,8 +146,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 7459; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true);
-            expect(events.halfFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(true);
+            expect(events.halfFrame).toBe(false);
         });
 
         it('should generate quarter-frame and half-frame at step 2 (cycle 14913)', () => {
@@ -158,8 +155,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 14913; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true);
-            expect(events.halfFrame).to.equal(true);
+            expect(events.quarterFrame).toBe(true);
+            expect(events.halfFrame).toBe(true);
         });
 
         it('should generate quarter-frame at step 3 (cycle 22371)', () => {
@@ -167,8 +164,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 22371; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true);
-            expect(events.halfFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(true);
+            expect(events.halfFrame).toBe(false);
         });
 
         it('should generate quarter-frame and half-frame at step 4 (cycle 29829)', () => {
@@ -176,8 +173,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 29829; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true);
-            expect(events.halfFrame).to.equal(true);
+            expect(events.quarterFrame).toBe(true);
+            expect(events.halfFrame).toBe(true);
         });
 
         it('should generate quarter-frame and half-frame at step 5 (cycle 37281)', () => {
@@ -185,8 +182,8 @@ describe('FrameCounter', () => {
             for (let cycle = 4; cycle <= 37281; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true, 'Quarter-frame at 37281');
-            expect(events.halfFrame).to.equal(true, 'Half-frame at 37281');
+            expect(events.quarterFrame).toBe(true, 'Quarter-frame at 37281');
+            expect(events.halfFrame).toBe(true, 'Half-frame at 37281');
         });
 
         it('should reset sequence after step 5', () => {
@@ -200,8 +197,8 @@ describe('FrameCounter', () => {
             for (let cycle = 37282; cycle <= 37281 + 7459; cycle++) {
                 events = fc.clock(cycle);
             }
-            expect(events.quarterFrame).to.equal(true);
-            expect(events.halfFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(true);
+            expect(events.halfFrame).toBe(false);
         });
     });
 
@@ -221,8 +218,8 @@ describe('FrameCounter', () => {
                 events = fc.clock(cycle);
             }
             
-            expect(events.irq).to.equal(true, 'IRQ at step 4');
-            expect(fc.isIrqPending()).to.equal(true);
+            expect(events.irq).toBe(true, 'IRQ at step 4');
+            expect(fc.isIrqPending()).toBe(true);
         });
 
         it('should not generate IRQ when inhibit flag is set', () => {
@@ -240,8 +237,8 @@ describe('FrameCounter', () => {
                 events = fc.clock(cycle);
             }
             
-            expect(events.irq).to.equal(false, 'No IRQ when inhibited');
-            expect(fc.isIrqPending()).to.equal(false);
+            expect(events.irq).toBe(false, 'No IRQ when inhibited');
+            expect(fc.isIrqPending()).toBe(false);
         });
 
         it('should not generate IRQ in 5-step mode', () => {
@@ -257,10 +254,10 @@ describe('FrameCounter', () => {
             let events;
             for (let cycle = 4; cycle <= 37281; cycle++) {
                 events = fc.clock(cycle);
-                expect(events.irq).to.equal(false, `No IRQ at cycle ${cycle}`);
+                expect(events.irq).toBe(false, `No IRQ at cycle ${cycle}`);
             }
             
-            expect(fc.isIrqPending()).to.equal(false);
+            expect(fc.isIrqPending()).toBe(false);
         });
 
         it('should persist IRQ flag until cleared', () => {
@@ -276,15 +273,15 @@ describe('FrameCounter', () => {
                 fc.clock(cycle);
             }
             
-            expect(fc.isIrqPending()).to.equal(true, 'IRQ pending after step 4');
+            expect(fc.isIrqPending()).toBe(true, 'IRQ pending after step 4');
             
             // Continue clocking - IRQ should persist
             for (let cycle = 29830; cycle <= 29850; cycle++) {
                 const events = fc.clock(cycle);
-                expect(events.irq).to.equal(true, `IRQ persists at cycle ${cycle}`);
+                expect(events.irq).toBe(true, `IRQ persists at cycle ${cycle}`);
             }
             
-            expect(fc.isIrqPending()).to.equal(true, 'IRQ still pending');
+            expect(fc.isIrqPending()).toBe(true, 'IRQ still pending');
         });
 
         it('should clear IRQ flag when clearIrqFlag() called', () => {
@@ -299,16 +296,16 @@ describe('FrameCounter', () => {
                 fc.clock(cycle);
             }
             
-            expect(fc.isIrqPending()).to.equal(true);
+            expect(fc.isIrqPending()).toBe(true);
             
             // Clear IRQ flag (simulates reading $4015)
             fc.clearIrqFlag();
             
-            expect(fc.isIrqPending()).to.equal(false);
+            expect(fc.isIrqPending()).toBe(false);
             
             // Should no longer report IRQ
             const events = fc.clock(29830);
-            expect(events.irq).to.equal(false);
+            expect(events.irq).toBe(false);
         });
 
         it('should clear IRQ flag when inhibit is set', () => {
@@ -323,7 +320,7 @@ describe('FrameCounter', () => {
                 fc.clock(cycle);
             }
             
-            expect(fc.isIrqPending()).to.equal(true);
+            expect(fc.isIrqPending()).toBe(true);
             
             // Set IRQ inhibit
             fc.writeControl(0x40, 29830); // IRQ inhibit=1
@@ -333,7 +330,7 @@ describe('FrameCounter', () => {
                 fc.clock(cycle);
             }
             
-            expect(fc.isIrqPending()).to.equal(false, 'IRQ cleared by inhibit');
+            expect(fc.isIrqPending()).toBe(false, 'IRQ cleared by inhibit');
         });
     });
 
@@ -349,18 +346,18 @@ describe('FrameCounter', () => {
             
             // Cycles 0-2: no effect yet
             events = fc2.clock(0);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             events = fc2.clock(1);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             events = fc2.clock(2);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             events = fc2.clock(3);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             
             // Cycle 4 (0 + 4): write takes effect with immediate events
             events = fc2.clock(4);
-            expect(events.quarterFrame).to.equal(true, 'Immediate quarter after delay');
-            expect(events.halfFrame).to.equal(true, 'Immediate half after delay');
+            expect(events.quarterFrame).toBe(true, 'Immediate quarter after delay');
+            expect(events.halfFrame).toBe(true, 'Immediate half after delay');
         });
 
         it('should delay write by 3 cycles when written on odd CPU cycle', () => {
@@ -373,16 +370,16 @@ describe('FrameCounter', () => {
             
             // Cycles 1-2: no effect yet
             events = fc2.clock(1);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             events = fc2.clock(2);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             events = fc2.clock(3);
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
             
             // Cycle 4 (1 + 3): write takes effect
             events = fc2.clock(4);
-            expect(events.quarterFrame).to.equal(true, 'Immediate quarter after delay');
-            expect(events.halfFrame).to.equal(true, 'Immediate half after delay');
+            expect(events.quarterFrame).toBe(true, 'Immediate quarter after delay');
+            expect(events.halfFrame).toBe(true, 'Immediate half after delay');
         });
 
         it('should reset sequencer after write delay', () => {
@@ -408,7 +405,7 @@ describe('FrameCounter', () => {
             }
             
             // Should hit step 1 at cycle 100 + 7459
-            expect(events.quarterFrame).to.equal(true, 'Step 1 after reset');
+            expect(events.quarterFrame).toBe(true, 'Step 1 after reset');
         });
 
         it('should not generate immediate events in 4-step mode', () => {
@@ -424,8 +421,8 @@ describe('FrameCounter', () => {
             }
             
             // Should NOT have immediate events in 4-step mode
-            expect(events.quarterFrame).to.equal(false, 'No immediate quarter in 4-step');
-            expect(events.halfFrame).to.equal(false, 'No immediate half in 4-step');
+            expect(events.quarterFrame).toBe(false, 'No immediate quarter in 4-step');
+            expect(events.halfFrame).toBe(false, 'No immediate half in 4-step');
         });
     });
 
@@ -452,14 +449,14 @@ describe('FrameCounter', () => {
             }
             // Write takes effect at 10004 with immediate events
             events = fc.clock(10004);
-            expect(events.quarterFrame).to.equal(true, 'Immediate events on switch to 5-step');
+            expect(events.quarterFrame).toBe(true, 'Immediate events on switch to 5-step');
             
             // Should now follow 5-step timing - step 5 at 10001 + 37281 = 47282
             for (let cycle = 10005; cycle < 10001 + 37281; cycle++) {
                 fc.clock(cycle);
             }
             events = fc.clock(10001 + 37281);
-            expect(events.quarterFrame).to.equal(true, 'Step 5 in 5-step mode');
+            expect(events.quarterFrame).toBe(true, 'Step 5 in 5-step mode');
         });
 
         it('should switch from 5-step to 4-step mode', () => {
@@ -480,7 +477,7 @@ describe('FrameCounter', () => {
             for (let cycle = 104; cycle <= 104 + 37281; cycle++) {
                 events = fc.clock(cycle);
                 if (cycle === 104 + 37281) {
-                    expect(events.quarterFrame).to.equal(false, 'No step 5 in 4-step mode');
+                    expect(events.quarterFrame).toBe(false, 'No step 5 in 4-step mode');
                 }
             }
         });
@@ -502,7 +499,7 @@ describe('FrameCounter', () => {
             // Last write was 0x40 (4-step, IRQ inhibit) at cycle 2
             // Delay should complete by cycle 6 (2 + 4)
             // Should not get immediate events (4-step mode)
-            expect(events.quarterFrame).to.equal(false);
+            expect(events.quarterFrame).toBe(false);
         });
 
         it('should maintain state across many cycles', () => {
@@ -523,24 +520,24 @@ describe('FrameCounter', () => {
                 fc.clock(cycle);
             }
             events = fc.clock(37281);
-            expect(events.quarterFrame).to.equal(true, 'Step 5 in sequence 0');
-            expect(events.halfFrame).to.equal(true, 'Half-frame in sequence 0');
+            expect(events.quarterFrame).toBe(true, 'Step 5 in sequence 0');
+            expect(events.halfFrame).toBe(true, 'Half-frame in sequence 0');
             
             // Second sequence: baseCycle reset to 37281, so step 5 at 37281 + 37281 = 74562
             for (let cycle = 37282; cycle < 74562; cycle++) {
                 fc.clock(cycle);
             }
             events = fc.clock(74562);
-            expect(events.quarterFrame).to.equal(true, 'Step 5 in sequence 1');
-            expect(events.halfFrame).to.equal(true, 'Half-frame in sequence 1');
+            expect(events.quarterFrame).toBe(true, 'Step 5 in sequence 1');
+            expect(events.halfFrame).toBe(true, 'Half-frame in sequence 1');
             
             // Third sequence: baseCycle reset to 74562, so step 5 at 74562 + 37281 = 111843
             for (let cycle = 74563; cycle < 111843; cycle++) {
                 fc.clock(cycle);
             }
             events = fc.clock(111843);
-            expect(events.quarterFrame).to.equal(true, 'Step 5 in sequence 2');
-            expect(events.halfFrame).to.equal(true, 'Half-frame in sequence 2');
+            expect(events.quarterFrame).toBe(true, 'Step 5 in sequence 2');
+            expect(events.halfFrame).toBe(true, 'Half-frame in sequence 2');
         });
     });
 
@@ -559,13 +556,13 @@ describe('FrameCounter', () => {
                 
                 // Effect should NOT occur immediately
                 let events = fc.clock(1);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 1');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 1');
                 
                 events = fc.clock(2);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 2');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 2');
                 
                 events = fc.clock(3);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 3');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 3');
                 
                 // Effect should occur after 3 cycles (at cycle 4)
                 events = fc.clock(4);
@@ -580,16 +577,16 @@ describe('FrameCounter', () => {
                 
                 // Effect should NOT occur immediately
                 let events = fc.clock(2);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 2');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 2');
                 
                 events = fc.clock(3);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 3');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 3');
                 
                 events = fc.clock(4);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 4');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 4');
                 
                 events = fc.clock(5);
-                expect(events.quarterFrame).to.equal(false, 'No effect at cycle 5');
+                expect(events.quarterFrame).toBe(false, 'No effect at cycle 5');
                 
                 // Effect should occur after 4 cycles (at cycle 6)
                 events = fc.clock(6);
@@ -614,8 +611,8 @@ describe('FrameCounter', () => {
                 const events = fc.clock(4);
                 
                 // Should generate quarter and half frame immediately
-                expect(events.quarterFrame).to.equal(true, 'Quarter frame on mode switch');
-                expect(events.halfFrame).to.equal(true, 'Half frame on mode switch');
+                expect(events.quarterFrame).toBe(true, 'Quarter frame on mode switch');
+                expect(events.halfFrame).toBe(true, 'Half frame on mode switch');
             });
 
             it('should reset sequencer after write delay, with baseCycle set to write cycle', () => {
@@ -643,11 +640,11 @@ describe('FrameCounter', () => {
                 // First step should occur at baseCycle + 7459 = 100 + 7459 = 7559
                 for (let i = 105; i < 7559; i++) {
                     const e = fc.clock(i);
-                    expect(e.quarterFrame).to.equal(false, `No quarter frame before step 1 at ${i}`);
+                    expect(e.quarterFrame).toBe(false, `No quarter frame before step 1 at ${i}`);
                 }
                 
                 const stepEvents = fc.clock(7559);
-                expect(stepEvents.quarterFrame).to.equal(true, 'Quarter frame at step 1');
+                expect(stepEvents.quarterFrame).toBe(true, 'Quarter frame at step 1');
             });
 
             it('should clear IRQ flag if IRQ inhibit is set in pending write', () => {
@@ -666,7 +663,7 @@ describe('FrameCounter', () => {
                 fc.clock(4); // Write takes effect
                 
                 // IRQ should be clear
-                expect(fc.isIrqPending()).to.equal(false);
+                expect(fc.isIrqPending()).toBe(false);
             });
 
             it('should handle multiple rapid writes correctly', () => {
@@ -733,7 +730,7 @@ describe('FrameCounter', () => {
                 
                 // Should have 4 quarter-frame events
                 expect(quarterFrameCycles).to.have.lengthOf(4);
-                expect(quarterFrameCycles).to.deep.equal([7459, 14913, 22371, 29829]);
+                expect(quarterFrameCycles).toEqual([7459, 14913, 22371, 29829]);
             });
 
             it('should generate quarter-frame every ~3728.5 cycles in 5-step mode', () => {
@@ -760,7 +757,7 @@ describe('FrameCounter', () => {
                 
                 // Should have 5 quarter-frame events (after immediate one)
                 expect(quarterFrameCycles).to.have.lengthOf(5);
-                expect(quarterFrameCycles).to.deep.equal([7459, 14913, 22371, 29829, 37281]);
+                expect(quarterFrameCycles).toEqual([7459, 14913, 22371, 29829, 37281]);
             });
 
             it('should verify quarter-frame interval calculation: (step_cycle / step_number)', () => {
@@ -776,7 +773,7 @@ describe('FrameCounter', () => {
                 }
                 
                 const avgInterval4 = events4[events4.length - 1] / events4.length;
-                expect(avgInterval4).to.be.closeTo(7457.25, 1);
+                expect(avgInterval4).toBeCloseTo(7457.25, 1);
             });
         });
 
@@ -798,11 +795,11 @@ describe('FrameCounter', () => {
                 
                 // Should have 2 half-frame events
                 expect(halfFrameCycles).to.have.lengthOf(2);
-                expect(halfFrameCycles).to.deep.equal([14913, 29829]);
+                expect(halfFrameCycles).toEqual([14913, 29829]);
                 
                 // Interval should be 29829 - 14913 = 14916 cycles
                 const interval = halfFrameCycles[1] - halfFrameCycles[0];
-                expect(interval).to.equal(14916);
+                expect(interval).toBe(14916);
             });
 
             it('should generate half-frame at steps 2, 4, and 5 in 5-step mode', () => {
@@ -821,16 +818,16 @@ describe('FrameCounter', () => {
                 
                 // Should have 3 half-frame events (after immediate one)
                 expect(halfFrameCycles).to.have.lengthOf(3);
-                expect(halfFrameCycles).to.deep.equal([14913, 29829, 37281]);
+                expect(halfFrameCycles).toEqual([14913, 29829, 37281]);
                 
                 // Intervals: 14913 - 4 = 14909, 29829 - 14913 = 14916, 37281 - 29829 = 7452
                 const interval1 = halfFrameCycles[0] - 4; // From immediate to first
                 const interval2 = halfFrameCycles[1] - halfFrameCycles[0];
                 const interval3 = halfFrameCycles[2] - halfFrameCycles[1];
                 
-                expect(interval1).to.equal(14909);
-                expect(interval2).to.equal(14916);
-                expect(interval3).to.equal(7452);
+                expect(interval1).toBe(14909);
+                expect(interval2).toBe(14916);
+                expect(interval3).toBe(7452);
             });
 
             it('should verify half-frame occurs twice per full sequence in 4-step mode', () => {
@@ -843,7 +840,7 @@ describe('FrameCounter', () => {
                     if (events.halfFrame) halfFrameCount++;
                 }
                 
-                expect(halfFrameCount).to.equal(2);
+                expect(halfFrameCount).toBe(2);
             });
 
             it('should verify half-frame occurs three times per full sequence in 5-step mode', () => {
@@ -858,7 +855,7 @@ describe('FrameCounter', () => {
                 }
                 
                 // Should have 3 half-frame events in the sequence at steps 2, 4, and 5
-                expect(halfFrameCount).to.equal(3);
+                expect(halfFrameCount).toBe(3);
             });
         });
 
@@ -877,7 +874,7 @@ describe('FrameCounter', () => {
                     }
                 }
                 
-                expect(sequenceEnd).to.equal(29829);
+                expect(sequenceEnd).toBe(29829);
                 // Sequence length is approximately 29830 cycles (29829 + 1)
             });
 
@@ -895,7 +892,7 @@ describe('FrameCounter', () => {
                     }
                 }
                 
-                expect(sequenceEnd).to.equal(37281);
+                expect(sequenceEnd).toBe(37281);
                 // Sequence length is approximately 37282 cycles (37281 + 1)
             });
 
@@ -907,7 +904,7 @@ describe('FrameCounter', () => {
                 const step5Length = 37281;
                 const ratio = step5Length / step4Length;
                 
-                expect(ratio).to.be.closeTo(1.25, 0.01);
+                expect(ratio).toBeCloseTo(1.25, 0.01);
             });
 
             it('should verify 4-step has 4 quarter-frames, 5-step has 5', () => {
@@ -919,7 +916,7 @@ describe('FrameCounter', () => {
                 for (let cycle = 4; cycle <= 29829; cycle++) {
                     if (fc.clock(cycle).quarterFrame) count4++;
                 }
-                expect(count4).to.equal(4);
+                expect(count4).toBe(4);
                 
                 // 5-step mode
                 const fc5 = new FrameCounter();
@@ -930,7 +927,7 @@ describe('FrameCounter', () => {
                 for (let cycle = 5; cycle <= 37281; cycle++) {
                     if (fc5.clock(cycle).quarterFrame) count5++;
                 }
-                expect(count5).to.equal(5);
+                expect(count5).toBe(5);
             });
 
             it('should verify timing difference at step 4', () => {
@@ -974,8 +971,8 @@ describe('FrameCounter', () => {
                     }
                 }
                 
-                expect(nextEvent4).to.be.greaterThan(37000);
-                expect(nextEvent5).to.equal(37281);
+                expect(nextEvent4).toBeGreaterThan(37000);
+                expect(nextEvent5).toBe(37281);
             });
         });
 
@@ -993,7 +990,7 @@ describe('FrameCounter', () => {
                 }
                 
                 // IRQ should trigger at step 4
-                expect(irqCycle).to.equal(29829);
+                expect(irqCycle).toBe(29829);
             });
 
             it('should not trigger IRQ before step 4', () => {
@@ -1003,7 +1000,7 @@ describe('FrameCounter', () => {
                 // Clock through steps 1, 2, 3
                 for (let cycle = 4; cycle < 29829; cycle++) {
                     const events = fc.clock(cycle);
-                    expect(events.irq).to.equal(false, `No IRQ before step 4 at cycle ${cycle}`);
+                    expect(events.irq).toBe(false, `No IRQ before step 4 at cycle ${cycle}`);
                 }
             });
 
@@ -1019,7 +1016,7 @@ describe('FrameCounter', () => {
                 // IRQ should persist for several cycles
                 for (let cycle = 29830; cycle <= 29850; cycle++) {
                     const events = fc.clock(cycle);
-                    expect(events.irq).to.equal(true, `IRQ persists at cycle ${cycle}`);
+                    expect(events.irq).toBe(true, `IRQ persists at cycle ${cycle}`);
                 }
             });
 
@@ -1030,7 +1027,7 @@ describe('FrameCounter', () => {
                 // Clock through entire sequence including step 4
                 for (let cycle = 5; cycle <= 37281; cycle++) {
                     const events = fc.clock(cycle);
-                    expect(events.irq).to.equal(false, `No IRQ in 5-step mode at cycle ${cycle}`);
+                    expect(events.irq).toBe(false, `No IRQ in 5-step mode at cycle ${cycle}`);
                 }
             });
 
@@ -1046,9 +1043,9 @@ describe('FrameCounter', () => {
                 const events = fc.clock(29829);
                 
                 // All three should happen simultaneously at step 4
-                expect(events.quarterFrame).to.equal(true, 'Quarter-frame at step 4');
-                expect(events.halfFrame).to.equal(true, 'Half-frame at step 4');
-                expect(events.irq).to.equal(true, 'IRQ at step 4');
+                expect(events.quarterFrame).toBe(true, 'Quarter-frame at step 4');
+                expect(events.halfFrame).toBe(true, 'Half-frame at step 4');
+                expect(events.irq).toBe(true, 'IRQ at step 4');
             });
 
             it('should verify IRQ timing matches step 4 timing exactly', () => {
@@ -1069,8 +1066,8 @@ describe('FrameCounter', () => {
                 }
                 
                 // IRQ should occur at exactly the same cycle as step 4
-                expect(irqCycle).to.equal(step4Cycle);
-                expect(step4Cycle).to.equal(29829);
+                expect(irqCycle).toBe(step4Cycle);
+                expect(step4Cycle).toBe(29829);
             });
         });
 
@@ -1096,10 +1093,10 @@ describe('FrameCounter', () => {
                 expect(quarterFrameEvents).to.have.lengthOf(4);
                 
                 // Verify expected pattern: Q, QH, Q, QH
-                expect(quarterFrameEvents[0].hasHalfFrame).to.equal(false);
-                expect(quarterFrameEvents[1].hasHalfFrame).to.equal(true);
-                expect(quarterFrameEvents[2].hasHalfFrame).to.equal(false);
-                expect(quarterFrameEvents[3].hasHalfFrame).to.equal(true);
+                expect(quarterFrameEvents[0].hasHalfFrame).toBe(false);
+                expect(quarterFrameEvents[1].hasHalfFrame).toBe(true);
+                expect(quarterFrameEvents[2].hasHalfFrame).toBe(false);
+                expect(quarterFrameEvents[3].hasHalfFrame).toBe(true);
             });
 
             it('should provide consistent half-frame signals for sweep and length counter clocking', () => {
@@ -1117,7 +1114,7 @@ describe('FrameCounter', () => {
                 
                 // Should have 2 half-frame events
                 expect(halfFrameEvents).to.have.lengthOf(2);
-                expect(halfFrameEvents).to.deep.equal([14913, 29829]);
+                expect(halfFrameEvents).toEqual([14913, 29829]);
             });
 
             it('should verify quarter-frame always accompanies half-frame', () => {
@@ -1128,7 +1125,7 @@ describe('FrameCounter', () => {
                 for (let cycle = 4; cycle <= 29829; cycle++) {
                     const events = fc.clock(cycle);
                     if (events.halfFrame) {
-                        expect(events.quarterFrame).to.equal(true,
+                        expect(events.quarterFrame).toBe(true,
                             `Half-frame at ${cycle} must have quarter-frame`);
                     }
                 }
@@ -1147,7 +1144,7 @@ describe('FrameCounter', () => {
                         break;
                     }
                 }
-                expect(firstEvent).to.equal(7459);
+                expect(firstEvent).toBe(7459);
                 
                 // Switch to 5-step mode
                 fc.writeControl(0x80, 7500);
@@ -1165,7 +1162,7 @@ describe('FrameCounter', () => {
                 }
                 
                 // Should be at 7500 + 7459 = 14959
-                expect(nextEvent).to.equal(14959);
+                expect(nextEvent).toBe(14959);
             });
 
             it('should generate predictable event sequence for channel synchronization', () => {
@@ -1187,7 +1184,7 @@ describe('FrameCounter', () => {
                 }
                 
                 // Verify exact sequence: Q@7459, QH@14913, Q@22371, QH@29829
-                expect(eventSequence).to.deep.equal([
+                expect(eventSequence).toEqual([
                     { cycle: 7459, q: true, h: false },
                     { cycle: 14913, q: true, h: true },
                     { cycle: 22371, q: true, h: false },

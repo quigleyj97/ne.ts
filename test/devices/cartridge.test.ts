@@ -1,8 +1,5 @@
-import chai from "chai";
-import { CartridgeMapperFactory, NROMCartridge } from "../../lib/index.js";
+import { CartridgeMapperFactory, NROMCartridge } from "../../src/index.js";
 import { readFileSync } from "fs";
-
-const expect = chai.expect;
 
 const NESTEST_PATH = "./test/data/nestest.nes";
 const NROM_OFFSET = 0x3FE0;
@@ -13,28 +10,26 @@ describe("Cartridge Factory", () => {
         
         const cart = CartridgeMapperFactory.from_buffer(buf);
 
-        expect(cart).to.be.instanceOf(NROMCartridge);
-        expect(cart.is_16k).to.be.true;
+        expect(cart).toBeInstanceOf(NROMCartridge);
+        expect(cart.is_16k).toBe(true);
     });
 });
 
 describe("NROMCartridge", () => {
-    /** @type {Buffer} */
-    let buf;
-    /** @type {import("../../src/index.js").NROMCartridge} */
-    let cart;
+    let buf: Buffer;
+    let cart: NROMCartridge;
 
-    before(() => {
+    beforeAll(() => {
         buf = readFileSync(NESTEST_PATH);
     });
 
     beforeEach(() => {
-        cart = CartridgeMapperFactory.from_buffer(buf);
+        cart = CartridgeMapperFactory.from_buffer(buf) as NROMCartridge;
     });
 
     it("should map PRG reads correctly", () => {
         const data = cart.prg.read(0xC000 - 0x4020);
-        expect(data).to.equal(0x4C);
+        expect(data).toBe(0x4C);
     });
 
     it("should mirror PRG reads correctly", () => {
@@ -42,13 +37,13 @@ describe("NROMCartridge", () => {
         // In full address space, these addresses map to the reset vector
         const left = cart.prg.read(0x3FFF + NROM_OFFSET);
         const right = cart.prg.read(0x7FFF + NROM_OFFSET);
-        expect(left).to.equal(0xC5, "Initial address doesn't match expected result")
-        expect(left).to.equal(right, "Mirrors don't align");
+        expect(left).toBe(0xC5);
+        expect(left).toBe(right);
     });
 
     it("should read CHR correctly", () => {
         // $0020 should be 0x80, which can be verified by looking in xxd
         const data = cart.chr.read(0x0020);
-        expect(data).to.equal(0x80);
+        expect(data).toBe(0x80);
     });
-})
+});

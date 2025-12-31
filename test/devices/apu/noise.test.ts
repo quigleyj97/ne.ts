@@ -1,7 +1,4 @@
-import chai from "chai";
-import { NoiseChannel } from '../../../lib/devices/apu/channels/noise.js';
-
-const expect = chai.expect;
+import { NoiseChannel } from '../../../src/devices/apu/channels/noise.js';
 
 /**
  * NoiseChannel Unit Tests
@@ -20,15 +17,15 @@ describe('NoiseChannel', () => {
 
     describe('Construction', () => {
         it('should construct a noise channel', () => {
-            expect(noise).to.be.instanceOf(NoiseChannel);
+            expect(noise).toBeInstanceOf(NoiseChannel);
         });
 
         it('should start inactive', () => {
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
 
         it('should start with zero output', () => {
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.getOutput()).toBe(0);
         });
     });
 
@@ -61,7 +58,7 @@ describe('NoiseChannel', () => {
             }
             
             // Should eventually find non-zero output (LFSR bit 0 = 0)
-            expect(foundNonZero).to.equal(true);
+            expect(foundNonZero).toBe(true);
         });
 
         it('should have LFSR value of 1 after reset', () => {
@@ -83,7 +80,7 @@ describe('NoiseChannel', () => {
             
             // Should have some variation (not all 0)
             const hasNonZero = outputs.some(v => v > 0);
-            expect(hasNonZero).to.equal(true);
+            expect(hasNonZero).toBe(true);
         });
     });
 
@@ -122,8 +119,8 @@ describe('NoiseChannel', () => {
             // Should have both 0 and non-zero values (pseudo-random)
             const hasZero = outputs.some(v => v === 0);
             const hasNonZero = outputs.some(v => v > 0);
-            expect(hasZero).to.equal(true);
-            expect(hasNonZero).to.equal(true);
+            expect(hasZero).toBe(true);
+            expect(hasNonZero).toBe(true);
         });
 
         it('should produce pseudo-random pattern in long mode', () => {
@@ -147,7 +144,7 @@ describe('NoiseChannel', () => {
             
             // Should have many transitions (noise is random-like)
             // Expect at least 5 transitions in 50 samples
-            expect(transitions).to.be.greaterThan(5);
+            expect(transitions).toBeGreaterThan(5);
         });
     });
 
@@ -177,8 +174,8 @@ describe('NoiseChannel', () => {
             // Should have both 0 and non-zero values (pseudo-random)
             const hasZero = outputs.some(v => v === 0);
             const hasNonZero = outputs.some(v => v > 0);
-            expect(hasZero).to.equal(true);
-            expect(hasNonZero).to.equal(true);
+            expect(hasZero).toBe(true);
+            expect(hasNonZero).toBe(true);
         });
 
         it('should produce different pattern than long mode', () => {
@@ -221,7 +218,7 @@ describe('NoiseChannel', () => {
             }
             
             // Should have some differences (at least 10%)
-            expect(differences).to.be.greaterThan(5);
+            expect(differences).toBeGreaterThan(5);
         });
 
         it('should produce metallic sound with shorter period in short mode', () => {
@@ -241,8 +238,8 @@ describe('NoiseChannel', () => {
             // Just verify we get pseudo-random output
             const hasZero = outputs.some(v => v === 0);
             const hasNonZero = outputs.some(v => v > 0);
-            expect(hasZero).to.equal(true);
-            expect(hasNonZero).to.equal(true);
+            expect(hasZero).toBe(true);
+            expect(hasNonZero).toBe(true);
         });
     });
 
@@ -268,8 +265,8 @@ describe('NoiseChannel', () => {
             // Should have variation
             const hasZero = outputs.some(v => v === 0);
             const hasNonZero = outputs.some(v => v > 0);
-            expect(hasZero).to.equal(true);
-            expect(hasNonZero).to.equal(true);
+            expect(hasZero).toBe(true);
+            expect(hasNonZero).toBe(true);
         });
 
         it('should switch to short mode when bit 7 of $400E is 1', () => {
@@ -287,8 +284,8 @@ describe('NoiseChannel', () => {
             // Should have variation
             const hasZero = outputs.some(v => v === 0);
             const hasNonZero = outputs.some(v => v > 0);
-            expect(hasZero).to.equal(true);
-            expect(hasNonZero).to.equal(true);
+            expect(hasZero).toBe(true);
+            expect(hasNonZero).toBe(true);
         });
 
         it('should change behavior when mode is switched mid-operation', () => {
@@ -319,7 +316,7 @@ describe('NoiseChannel', () => {
             // Both should produce output (not all zeros)
             const beforeHasOutput = before.some(v => v > 0);
             const afterHasOutput = after.some(v => v > 0);
-            expect(beforeHasOutput || afterHasOutput).to.equal(true);
+            expect(beforeHasOutput || afterHasOutput).toBe(true);
         });
     });
 
@@ -354,7 +351,7 @@ describe('NoiseChannel', () => {
             }
             
             // Should have shifted LFSR at least once (every 5 clocks)
-            expect(shifts).to.be.greaterThan(4);
+            expect(shifts).toBeGreaterThan(4);
         });
 
         it('should use period index 15 for longest period (4068)', () => {
@@ -412,34 +409,34 @@ describe('NoiseChannel', () => {
             
             // Write length index 0 (value from table: 10)
             noise.write(3, 0x00); // Bits 7-3 = 00000
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             // Write length index 1 (value from table: 254)
             noise.write(3, 0x08); // Bits 7-3 = 00001
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             // Write length index 3 (value from table: 2)
             noise.write(3, 0x18); // Bits 7-3 = 00011
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
         });
 
         it('should not load length counter when channel is disabled', () => {
             noise.setEnabled(false);
             noise.write(3, 0x08); // Try to load length counter
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
 
         it('should decrement length counter when clocked', () => {
             noise.setEnabled(true);
             noise.write(3, 0x18); // Load index 3 = value 2
             
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             noise.clockLengthCounter();
-            expect(noise.isActive()).to.equal(true); // Still 1
+            expect(noise.isActive()).toBe(true); // Still 1
             
             noise.clockLengthCounter();
-            expect(noise.isActive()).to.equal(false); // Now 0
+            expect(noise.isActive()).toBe(false); // Now 0
         });
 
         it('should halt length counter when halt flag is set', () => {
@@ -447,7 +444,7 @@ describe('NoiseChannel', () => {
             noise.write(0, 0x20); // Set length counter halt (bit 5)
             noise.write(3, 0x18); // Load index 3 = value 2
             
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             // Clock length counter multiple times
             noise.clockLengthCounter();
@@ -455,7 +452,7 @@ describe('NoiseChannel', () => {
             noise.clockLengthCounter();
             
             // Should still be active (halt prevents decrement)
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
         });
 
         it('should not decrement length counter below 0', () => {
@@ -465,14 +462,14 @@ describe('NoiseChannel', () => {
             // Decrement to 0
             noise.clockLengthCounter();
             noise.clockLengthCounter();
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
             
             // Clock more times
             noise.clockLengthCounter();
             noise.clockLengthCounter();
             
             // Should still be inactive
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
 
         it('should silence channel when length counter reaches 0', () => {
@@ -487,7 +484,7 @@ describe('NoiseChannel', () => {
             noise.clockLengthCounter();
             
             // Should now be silenced (output always 0)
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.getOutput()).toBe(0);
         });
     });
 
@@ -514,7 +511,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundCorrectOutput).to.equal(true);
+            expect(foundCorrectOutput).toBe(true);
             
             // Try with volume 5
             noise.reset();
@@ -534,7 +531,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundCorrectOutput).to.equal(true);
+            expect(foundCorrectOutput).toBe(true);
         });
 
         it('should use envelope decay when bit 4 of $400C is clear', () => {
@@ -556,7 +553,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundEnvelopeOutput).to.equal(true);
+            expect(foundEnvelopeOutput).toBe(true);
         });
 
         it('should restart envelope on register $400F write', () => {
@@ -585,7 +582,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundEnvelopeOutput).to.equal(true);
+            expect(foundEnvelopeOutput).toBe(true);
         });
 
         it('should decay envelope over time in envelope mode', () => {
@@ -610,7 +607,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundDecayedOutput).to.equal(true);
+            expect(foundDecayedOutput).toBe(true);
         });
 
         it('should loop envelope when loop flag is set', () => {
@@ -639,7 +636,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundLoopedOutput).to.equal(true);
+            expect(foundLoopedOutput).toBe(true);
         });
     });
 
@@ -658,7 +655,7 @@ describe('NoiseChannel', () => {
             noise.clockLengthCounter();
             
             // Should output 0 regardless of LFSR state
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.getOutput()).toBe(0);
         });
 
         it('should output 0 when LFSR bit 0 is 1', () => {
@@ -666,7 +663,7 @@ describe('NoiseChannel', () => {
             
             // LFSR starts at 1, so bit 0 = 1
             // Initial output should be 0
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.getOutput()).toBe(0);
         });
 
         it('should output envelope volume when LFSR bit 0 is 0', () => {
@@ -684,7 +681,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundVolumeOutput).to.equal(true);
+            expect(foundVolumeOutput).toBe(true);
         });
 
         it('should alternate between 0 and volume based on LFSR', () => {
@@ -702,8 +699,8 @@ describe('NoiseChannel', () => {
             // Should have both 0 and 15
             const hasZero = outputs.some(v => v === 0);
             const hasVolume = outputs.some(v => v === 15);
-            expect(hasZero).to.equal(true);
-            expect(hasVolume).to.equal(true);
+            expect(hasZero).toBe(true);
+            expect(hasVolume).toBe(true);
         });
 
         it('should return values in range 0-15', () => {
@@ -725,21 +722,21 @@ describe('NoiseChannel', () => {
         it('should enable channel with setEnabled(true)', () => {
             noise.setEnabled(true);
             noise.write(3, 0x08); // Load length counter
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
         });
 
         it('should disable and clear length counter with setEnabled(false)', () => {
             noise.setEnabled(true);
             noise.write(3, 0x08); // Load length counter
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             noise.setEnabled(false);
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
 
         it('should return false from isActive() when disabled', () => {
             noise.setEnabled(false);
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
 
         it('should return false from isActive() when length counter is 0', () => {
@@ -749,13 +746,13 @@ describe('NoiseChannel', () => {
             noise.clockLengthCounter();
             noise.clockLengthCounter();
             
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
 
         it('should return true from isActive() when enabled and length > 0', () => {
             noise.setEnabled(true);
             noise.write(3, 0x08);
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
         });
 
         it('should output 0 when disabled', () => {
@@ -763,7 +760,7 @@ describe('NoiseChannel', () => {
             noise.write(0, 0x1F);
             noise.write(2, 0x00);
             
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.getOutput()).toBe(0);
         });
     });
 
@@ -777,7 +774,7 @@ describe('NoiseChannel', () => {
             
             // After reset, LFSR should be 1 (bit 0 = 1)
             // So initial output should be 0
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.getOutput()).toBe(0);
         });
 
         it('should clear all state on reset', () => {
@@ -788,8 +785,8 @@ describe('NoiseChannel', () => {
             
             noise.reset();
             
-            expect(noise.isActive()).to.equal(false);
-            expect(noise.getOutput()).to.equal(0);
+            expect(noise.isActive()).toBe(false);
+            expect(noise.getOutput()).toBe(0);
         });
 
         it('should allow channel to function after reset', () => {
@@ -811,7 +808,7 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(foundOutput).to.equal(true);
+            expect(foundOutput).toBe(true);
         });
     });
 
@@ -875,19 +872,19 @@ describe('NoiseChannel', () => {
                 }
             }
             
-            expect(found14).to.equal(true);
+            expect(found14).toBe(true);
         });
 
         it('should clock length counter on half frames', () => {
             noise.write(3, 0x18); // Load length = 2
             
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             noise.clockLengthCounter(); // 2 -> 1
-            expect(noise.isActive()).to.equal(true);
+            expect(noise.isActive()).toBe(true);
             
             noise.clockLengthCounter(); // 1 -> 0
-            expect(noise.isActive()).to.equal(false);
+            expect(noise.isActive()).toBe(false);
         });
     });
 
@@ -919,7 +916,7 @@ describe('NoiseChannel', () => {
                 }
                 
                 // Should find non-zero output (LFSR produces varying values)
-                expect(foundNonZero).to.equal(true);
+                expect(foundNonZero).toBe(true);
             });
 
             it('should reset LFSR to 1 on reset()', () => {
@@ -956,7 +953,7 @@ describe('NoiseChannel', () => {
                     }
                 }
                 
-                expect(foundNonZero).to.equal(true);
+                expect(foundNonZero).toBe(true);
             });
 
             it('should never get stuck at LFSR = 0 (which would silence forever)', () => {
@@ -982,8 +979,8 @@ describe('NoiseChannel', () => {
                 
                 // With LFSR properly initialized, we should see both 0 and non-zero values
                 // (because LFSR bit 0 varies, creating the noise effect)
-                expect(hasNonZero).to.equal(true);
-                expect(hasZero).to.equal(true);
+                expect(hasNonZero).toBe(true);
+                expect(hasZero).toBe(true);
             });
 
             it('should produce pseudo-random sequence due to non-zero LFSR initialization', () => {
@@ -1046,8 +1043,8 @@ describe('NoiseChannel', () => {
                 }
                 
                 // Both modes should work (produce non-zero output)
-                expect(foundNonZeroLong).to.equal(true);
-                expect(foundNonZeroShort).to.equal(true);
+                expect(foundNonZeroLong).toBe(true);
+                expect(foundNonZeroShort).toBe(true);
             });
         });
     });

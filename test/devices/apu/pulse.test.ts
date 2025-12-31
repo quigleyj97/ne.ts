@@ -1,7 +1,4 @@
-import chai from "chai";
-import { PulseChannel } from '../../../lib/devices/apu/channels/pulse.js';
-
-const expect = chai.expect;
+import { PulseChannel } from '../../../src/devices/apu/channels/pulse.js';
 
 /**
  * PulseChannel Unit Tests
@@ -23,19 +20,19 @@ describe('PulseChannel', () => {
 
     describe('Construction', () => {
         it('should construct Pulse 1 channel', () => {
-            expect(pulse1).to.be.instanceOf(PulseChannel);
+            expect(pulse1).toBeInstanceOf(PulseChannel);
         });
 
         it('should construct Pulse 2 channel', () => {
-            expect(pulse2).to.be.instanceOf(PulseChannel);
+            expect(pulse2).toBeInstanceOf(PulseChannel);
         });
 
         it('should start inactive', () => {
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
 
         it('should start with zero output', () => {
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
     });
 
@@ -63,7 +60,7 @@ describe('PulseChannel', () => {
                 }
             }
             
-            expect(actual).to.deep.equal(expected);
+            expect(actual).toEqual(expected);
         });
 
         it('should output 25% duty cycle pattern (duty 1)', () => {
@@ -78,7 +75,7 @@ describe('PulseChannel', () => {
                 }
             }
             
-            expect(actual).to.deep.equal(expected);
+            expect(actual).toEqual(expected);
         });
 
         it('should output 50% duty cycle pattern (duty 2)', () => {
@@ -93,7 +90,7 @@ describe('PulseChannel', () => {
                 }
             }
             
-            expect(actual).to.deep.equal(expected);
+            expect(actual).toEqual(expected);
         });
 
         it('should output 75% duty cycle pattern (duty 3)', () => {
@@ -108,7 +105,7 @@ describe('PulseChannel', () => {
                 }
             }
             
-            expect(actual).to.deep.equal(expected);
+            expect(actual).toEqual(expected);
         });
 
         it('should reset duty position on register 3 write', () => {
@@ -138,13 +135,13 @@ describe('PulseChannel', () => {
                     pulse1.clockTimer();
                 }
             }
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
             
             // Write register 3 to reset position to 0
             pulse1.write(3, 0x08);
             
             // Should now be at position 0 (value 1)
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
         });
     });
 
@@ -187,7 +184,7 @@ describe('PulseChannel', () => {
             
             // After writing register 3, duty position is reset to 0
             // Duty 3 pattern [1,1,1,1,1,1,0,0] at position 0 is 1, so output is 15
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
             
             // Advance to position 6 (pattern value 0)
             for (let i = 0; i < 6; i++) {
@@ -197,7 +194,7 @@ describe('PulseChannel', () => {
             }
             
             // At position 6, duty 3 pattern [1,1,1,1,1,1,0,0] has 0
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
             
             // Advance one more position to 7
             for (let j = 0; j <= 0x10; j++) {
@@ -205,7 +202,7 @@ describe('PulseChannel', () => {
             }
             
             // At position 7, duty 3 pattern also has 0
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
 
         it('should handle timer period of 0', () => {
@@ -227,34 +224,34 @@ describe('PulseChannel', () => {
             
             // Write length index 0 (value from table: 10)
             pulse1.write(3, 0x00); // Bits 7-3 = 00000
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
             
             // Write length index 1 (value from table: 254)
             pulse1.write(3, 0x08); // Bits 7-3 = 00001
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
             
             // Write length index 3 (value from table: 2)
             pulse1.write(3, 0x18); // Bits 7-3 = 00011
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
 
         it('should not load length counter when channel is disabled', () => {
             pulse1.setEnabled(false);
             pulse1.write(3, 0x08); // Try to load length counter
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
 
         it('should decrement length counter when clocked', () => {
             pulse1.setEnabled(true);
             pulse1.write(3, 0x18); // Load index 3 = value 2
             
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
             
             pulse1.clockLengthCounter();
-            expect(pulse1.isActive()).to.equal(true); // Still 1
+            expect(pulse1.isActive()).toBe(true); // Still 1
             
             pulse1.clockLengthCounter();
-            expect(pulse1.isActive()).to.equal(false); // Now 0
+            expect(pulse1.isActive()).toBe(false); // Now 0
         });
 
         it('should halt length counter when halt flag is set', () => {
@@ -262,7 +259,7 @@ describe('PulseChannel', () => {
             pulse1.write(0, 0x20); // Set length counter halt (bit 5)
             pulse1.write(3, 0x18); // Load index 3 = value 2
             
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
             
             // Clock length counter multiple times
             pulse1.clockLengthCounter();
@@ -270,7 +267,7 @@ describe('PulseChannel', () => {
             pulse1.clockLengthCounter();
             
             // Should still be active (halt prevents decrement)
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
 
         it('should not decrement length counter below 0', () => {
@@ -280,14 +277,14 @@ describe('PulseChannel', () => {
             // Decrement to 0
             pulse1.clockLengthCounter();
             pulse1.clockLengthCounter();
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
             
             // Clock more times
             pulse1.clockLengthCounter();
             pulse1.clockLengthCounter();
             
             // Should still be inactive
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
 
         it('should silence channel when length counter reaches 0', () => {
@@ -297,14 +294,14 @@ describe('PulseChannel', () => {
             pulse1.write(3, 0x18); // Load length = 2
             
             // Initially should have output (duty 3 position 0 is 1)
-            expect(pulse1.output()).to.be.greaterThan(0);
+            expect(pulse1.output()).toBeGreaterThan(0);
             
             // Decrement length counter to 0
             pulse1.clockLengthCounter();
             pulse1.clockLengthCounter();
             
             // Should now be silenced
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
     });
 
@@ -312,21 +309,21 @@ describe('PulseChannel', () => {
         it('should enable channel with setEnabled(true)', () => {
             pulse1.setEnabled(true);
             pulse1.write(3, 0x08); // Load length counter
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
 
         it('should disable and clear length counter with setEnabled(false)', () => {
             pulse1.setEnabled(true);
             pulse1.write(3, 0x08); // Load length counter
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
             
             pulse1.setEnabled(false);
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
 
         it('should return false from isActive() when disabled', () => {
             pulse1.setEnabled(false);
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
 
         it('should return false from isActive() when length counter is 0', () => {
@@ -336,13 +333,13 @@ describe('PulseChannel', () => {
             pulse1.clockLengthCounter();
             pulse1.clockLengthCounter();
             
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
 
         it('should return true from isActive() when enabled and length > 0', () => {
             pulse1.setEnabled(true);
             pulse1.write(3, 0x08);
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
     });
 
@@ -359,14 +356,14 @@ describe('PulseChannel', () => {
             pulse1.clockLengthCounter();
             pulse1.clockLengthCounter();
             
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
 
         it('should mute when timer period is less than 8', () => {
             pulse1.write(2, 0x07); // Timer = 7 (< 8)
             pulse1.write(3, 0x08); // Load length counter
             
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
 
         it('should not mute when timer period is 8 or greater', () => {
@@ -374,7 +371,7 @@ describe('PulseChannel', () => {
             pulse1.write(2, 0x08); // Timer = 8
             pulse1.write(3, 0x08); // Load length counter, reset duty position
             
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
         });
 
         it('should mute when sweep target period exceeds 0x7FF', () => {
@@ -388,7 +385,7 @@ describe('PulseChannel', () => {
             
             // Sweep target will be 0x600 + (0x600 >> 1) = 0x600 + 0x300 = 0x900 > 0x7FF
             // Should be muted
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
 
         it('should mute when duty cycle position outputs 0', () => {
@@ -397,7 +394,7 @@ describe('PulseChannel', () => {
             pulse1.write(3, 0x08); // Load length, reset duty position to 0
             
             // Position 0 of duty 0 is 0
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
             
             // Advance to position 7 (should output 15)
             for (let i = 0; i < 7; i++) {
@@ -406,7 +403,7 @@ describe('PulseChannel', () => {
                 }
             }
             
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
         });
     });
 
@@ -419,10 +416,10 @@ describe('PulseChannel', () => {
 
         it('should use constant volume when bit 4 is set', () => {
             pulse1.write(0, 0xDF); // Duty 3, constant volume flag set, volume 15
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
             
             pulse1.write(0, 0xD5); // Duty 3, constant volume flag set, volume 5
-            expect(pulse1.output()).to.equal(5);
+            expect(pulse1.output()).toBe(5);
         });
 
         it('should use envelope decay when bit 4 is clear', () => {
@@ -431,7 +428,7 @@ describe('PulseChannel', () => {
             
             // After restart, envelope should be at 15
             pulse1.clockEnvelope();
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
         });
 
         it('should restart envelope on register 3 write', () => {
@@ -447,7 +444,7 @@ describe('PulseChannel', () => {
             
             // Next clock should restart to 15
             pulse1.clockEnvelope();
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
         });
 
         it('should decay envelope over time in envelope mode', () => {
@@ -455,14 +452,14 @@ describe('PulseChannel', () => {
             pulse1.write(3, 0x08); // Restart envelope
             
             pulse1.clockEnvelope(); // Start flag set, loads 15
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
             
             // With period 0, should decay every clock
             pulse1.clockEnvelope(); // Divider 0->0, decay 15->14
-            expect(pulse1.output()).to.equal(14);
+            expect(pulse1.output()).toBe(14);
             
             pulse1.clockEnvelope(); // Decay 14->13
-            expect(pulse1.output()).to.equal(13);
+            expect(pulse1.output()).toBe(13);
         });
 
         it('should loop envelope when loop flag is set', () => {
@@ -475,11 +472,11 @@ describe('PulseChannel', () => {
             for (let i = 0; i < 15; i++) {
                 pulse1.clockEnvelope();
             }
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
             
             // Next clock should loop to 15
             pulse1.clockEnvelope();
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.output()).toBe(15);
         });
     });
 
@@ -589,7 +586,7 @@ describe('PulseChannel', () => {
             pulse1.write(2, 0x10);
             pulse1.write(3, 0x08);
             
-            expect(pulse1.output()).to.equal(15); // Constant volume
+            expect(pulse1.output()).toBe(15); // Constant volume
         });
 
         it('should decode register 1 correctly', () => {
@@ -611,7 +608,7 @@ describe('PulseChannel', () => {
             pulse1.write(3, 0xF7); // 11111_111
             // Length index = 31, Timer high = 7
             
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
 
         it('should ignore invalid register numbers', () => {
@@ -625,7 +622,7 @@ describe('PulseChannel', () => {
             pulse1.write(5, 0xFF);
             
             // Should not change output
-            expect(pulse1.output()).to.equal(before);
+            expect(pulse1.output()).toBe(before);
         });
 
         it('should handle all registers in sequence', () => {
@@ -634,8 +631,8 @@ describe('PulseChannel', () => {
             pulse1.write(2, 0x10); // Timer low
             pulse1.write(3, 0x08); // Length + timer high
             
-            expect(pulse1.isActive()).to.equal(true);
-            expect(pulse1.output()).to.equal(15);
+            expect(pulse1.isActive()).toBe(true);
+            expect(pulse1.output()).toBe(15);
         });
     });
 
@@ -649,8 +646,8 @@ describe('PulseChannel', () => {
             
             pulse1.reset();
             
-            expect(pulse1.isActive()).to.equal(false);
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.isActive()).toBe(false);
+            expect(pulse1.output()).toBe(0);
         });
 
         it('should reset duty cycle to 0', () => {
@@ -673,7 +670,7 @@ describe('PulseChannel', () => {
             pulse1.write(3, 0xFF);
             pulse1.reset();
             
-            expect(pulse1.isActive()).to.equal(false);
+            expect(pulse1.isActive()).toBe(false);
         });
     });
 
@@ -686,13 +683,13 @@ describe('PulseChannel', () => {
 
         it('should output envelope volume when enabled and duty is high', () => {
             pulse1.write(0, 0xD5); // Duty 3, constant volume 5
-            expect(pulse1.output()).to.equal(5);
+            expect(pulse1.output()).toBe(5);
         });
 
         it('should output 0 when duty is low', () => {
             pulse1.write(0, 0x15); // Duty 0 [0,0,0,0,0,0,0,1], constant vol 5
             // Position 0-6 should output 0
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
 
         it('should output value in range 0-15', () => {
@@ -705,7 +702,7 @@ describe('PulseChannel', () => {
         it('should output 0 when channel is disabled', () => {
             pulse1.write(0, 0xDF); // Duty 3, constant volume 15
             pulse1.setEnabled(false);
-            expect(pulse1.output()).to.equal(0);
+            expect(pulse1.output()).toBe(0);
         });
     });
 
@@ -737,14 +734,14 @@ describe('PulseChannel', () => {
             for (let i = 0; i < 100; i++) {
                 pulse1.clockTimer();
             }
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
 
         it('should handle multiple envelope clocks', () => {
             for (let i = 0; i < 100; i++) {
                 pulse1.clockEnvelope();
             }
-            expect(pulse1.isActive()).to.equal(true);
+            expect(pulse1.isActive()).toBe(true);
         });
     });
 
@@ -757,7 +754,7 @@ describe('PulseChannel', () => {
                 pulse1.write(3, 0x08); // Load length, reset duty position to 0
                 
                 // At position 0, duty 3 outputs 1 (volume 15)
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
                 
                 // Advance duty position to 6 (outputs 0)
                 for (let i = 0; i < 6; i++) {
@@ -765,13 +762,13 @@ describe('PulseChannel', () => {
                         pulse1.clockTimer();
                     }
                 }
-                expect(pulse1.output()).to.equal(0);
+                expect(pulse1.output()).toBe(0);
                 
                 // Write to $4003 again - should reset position to 0
                 pulse1.write(3, 0x08);
                 
                 // Now back at position 0 (outputs 15)
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
             });
 
             it('should reset duty position to 0 when writing to $4007 (Pulse 2)', () => {
@@ -781,7 +778,7 @@ describe('PulseChannel', () => {
                 pulse2.write(3, 0x08); // Load length, reset duty position to 0
                 
                 // At position 0, duty 3 outputs 1 (volume 15)
-                expect(pulse2.output()).to.equal(15);
+                expect(pulse2.output()).toBe(15);
                 
                 // Advance duty position to 7 (outputs 0)
                 for (let i = 0; i < 7; i++) {
@@ -789,13 +786,13 @@ describe('PulseChannel', () => {
                         pulse2.clockTimer();
                     }
                 }
-                expect(pulse2.output()).to.equal(0);
+                expect(pulse2.output()).toBe(0);
                 
                 // Write to $4007 again - should reset position to 0
                 pulse2.write(3, 0x08);
                 
                 // Now back at position 0 (outputs 15)
-                expect(pulse2.output()).to.equal(15);
+                expect(pulse2.output()).toBe(15);
             });
 
             it('should reset duty position regardless of which bits are written', () => {
@@ -805,7 +802,7 @@ describe('PulseChannel', () => {
                 pulse1.write(3, 0x00); // Load length index 0, reset position
                 
                 // Position 0 of duty 1 is 0 (outputs 0)
-                expect(pulse1.output()).to.equal(0);
+                expect(pulse1.output()).toBe(0);
                 
                 // Advance to position 6 (outputs 15)
                 for (let i = 0; i < 6; i++) {
@@ -813,13 +810,13 @@ describe('PulseChannel', () => {
                         pulse1.clockTimer();
                     }
                 }
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
                 
                 // Write different timer high bits - should still reset position
                 pulse1.write(3, 0xF8); // Different length and timer values
                 
                 // Back at position 0 (outputs 0)
-                expect(pulse1.output()).to.equal(0);
+                expect(pulse1.output()).toBe(0);
             });
 
             it('should reset duty position even mid-sequence', () => {
@@ -829,7 +826,7 @@ describe('PulseChannel', () => {
                 pulse1.write(3, 0x08); // Reset to position 0
                 
                 // Position 0 outputs 0
-                expect(pulse1.output()).to.equal(0);
+                expect(pulse1.output()).toBe(0);
                 
                 // Advance to position 4 (outputs 15)
                 for (let i = 0; i < 4; i++) {
@@ -837,17 +834,17 @@ describe('PulseChannel', () => {
                         pulse1.clockTimer();
                     }
                 }
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
                 
                 // Advance to position 5 (still outputs 15)
                 for (let j = 0; j <= 0x10; j++) {
                     pulse1.clockTimer();
                 }
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
                 
                 // Write register 3 - resets back to position 0
                 pulse1.write(3, 0x08);
-                expect(pulse1.output()).to.equal(0);
+                expect(pulse1.output()).toBe(0);
             });
 
             it('should occur on every write to register 3', () => {
@@ -857,7 +854,7 @@ describe('PulseChannel', () => {
                 
                 // First write resets to 0
                 pulse1.write(3, 0x08);
-                expect(pulse1.output()).to.equal(15); // Position 0 of duty 3
+                expect(pulse1.output()).toBe(15); // Position 0 of duty 3
                 
                 // Advance duty position
                 for (let i = 0; i < 3; i++) {
@@ -868,7 +865,7 @@ describe('PulseChannel', () => {
                 
                 // Second write resets to 0 again
                 pulse1.write(3, 0x08);
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
                 
                 // Advance again
                 for (let i = 0; i < 5; i++) {
@@ -879,7 +876,7 @@ describe('PulseChannel', () => {
                 
                 // Third write resets to 0 again
                 pulse1.write(3, 0x08);
-                expect(pulse1.output()).to.equal(15);
+                expect(pulse1.output()).toBe(15);
             });
         });
 
@@ -899,7 +896,7 @@ describe('PulseChannel', () => {
                     pulse1.write(3, 0x08); // Timer high = 0
                     
                     // Should be muted
-                    expect(pulse1.output()).to.equal(0, `Muted when period = ${period}`);
+                    expect(pulse1.output()).toBe(0, `Muted when period = ${period}`);
                 }
             });
 
@@ -942,7 +939,7 @@ describe('PulseChannel', () => {
                 // Target = 0x7FF + (0x7FF >> 1) = 0x7FF + 0x3FF = 0xBFE (> 0x7FF)
                 
                 // Should be muted due to sweep target overflow
-                expect(pulse1.output()).to.equal(0, 'Muted when sweep target > $7FF');
+                expect(pulse1.output()).toBe(0, 'Muted when sweep target > $7FF');
             });
 
             it('should mute when current period < 8 even if sweep is disabled', () => {
@@ -955,7 +952,7 @@ describe('PulseChannel', () => {
                 pulse1.write(3, 0x08);
                 
                 // Muted despite sweep being disabled
-                expect(pulse1.output()).to.equal(0);
+                expect(pulse1.output()).toBe(0);
             });
 
             it('should check both muting conditions independently', () => {
@@ -968,14 +965,14 @@ describe('PulseChannel', () => {
                 pulse1.write(1, 0x00);
                 pulse1.write(2, 0x05);
                 pulse1.write(3, 0x08);
-                expect(pulse1.output()).to.equal(0, 'Muted by period < 8');
+                expect(pulse1.output()).toBe(0, 'Muted by period < 8');
                 
                 // Fix period, but create sweep overflow
                 pulse1.write(1, 0x01); // Shift = 1, add mode
                 pulse1.write(2, 0xFF);
                 pulse1.write(3, (0x07 << 3) | 0x07); // Period = 0x7FF
                 // Target = 0x7FF + 0x3FF = overflow
-                expect(pulse1.output()).to.equal(0, 'Muted by sweep overflow');
+                expect(pulse1.output()).toBe(0, 'Muted by sweep overflow');
                 
                 // Fix both conditions
                 pulse1.write(1, 0x00); // Disable sweep
@@ -994,7 +991,7 @@ describe('PulseChannel', () => {
                 // Test period < 8
                 pulse2.write(2, 0x03);
                 pulse2.write(3, 0x08);
-                expect(pulse2.output()).to.equal(0, 'Pulse 2 muted when period < 8');
+                expect(pulse2.output()).toBe(0, 'Pulse 2 muted when period < 8');
                 
                 // Test valid period
                 pulse2.write(2, 0x10);

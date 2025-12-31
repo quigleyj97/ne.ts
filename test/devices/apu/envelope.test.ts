@@ -1,7 +1,4 @@
-import chai from "chai";
-import { EnvelopeUnit } from '../../../lib/devices/apu/units/envelope.js';
-
-const expect = chai.expect;
+import { EnvelopeUnit } from '../../../src/devices/apu/units/envelope.js';
 
 /**
  * EnvelopeUnit Unit Tests
@@ -22,35 +19,35 @@ describe('EnvelopeUnit', () => {
 
     describe('initialization', () => {
         it('should construct an envelope unit', () => {
-            expect(envelope).to.be.instanceOf(EnvelopeUnit);
+            expect(envelope).toBeInstanceOf(EnvelopeUnit);
         });
 
         it('should initialize with zero output', () => {
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should start in envelope mode (not constant volume)', () => {
             // Start flag not set, decay level is 0
             // In envelope mode, should output decay level (0)
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should initialize with default state after reset', () => {
             envelope.reset();
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
     });
 
     describe('setRegister', () => {
         it('should set volume/period value from bits 0-3', () => {
             envelope.setRegister(0x1F); // Constant volume ON, Volume = 15
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.setRegister(0x15); // Constant volume ON, Volume = 5
-            expect(envelope.output()).to.equal(5);
+            expect(envelope.output()).toBe(5);
             
             envelope.setRegister(0x10); // Constant volume ON, Volume = 0
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should set constant volume flag from bit 4', () => {
@@ -58,11 +55,11 @@ describe('EnvelopeUnit', () => {
             envelope.setRegister(0x0F); // Constant volume OFF, volume = 15
             envelope.setStartFlag();
             envelope.clock(); // Start, set decay to 15
-            expect(envelope.output()).to.equal(15); // Outputs decay level
+            expect(envelope.output()).toBe(15); // Outputs decay level
             
             // Bit 4 = 1: constant volume mode
             envelope.setRegister(0x1F); // Constant volume ON, volume = 15
-            expect(envelope.output()).to.equal(15); // Outputs volume directly
+            expect(envelope.output()).toBe(15); // Outputs volume directly
         });
 
         it('should set loop flag from bit 5', () => {
@@ -75,11 +72,11 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 15; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Should stay at 0 (no loop)
             envelope.clock();
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Bit 5 = 1: loop enabled
             envelope.setRegister(0x20); // Loop ON, envelope mode, period = 0
@@ -90,45 +87,45 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 15; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Next clock should wrap to 15 (loop enabled)
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should handle all combinations of flags', () => {
             // Test: Loop=1, Constant=1, Volume=7
             envelope.setRegister(0x37); // 00110111
-            expect(envelope.output()).to.equal(7);
+            expect(envelope.output()).toBe(7);
             
             // Test: Loop=1, Constant=0, Volume=12
             envelope.setRegister(0x2C); // 00101100
             envelope.setStartFlag();
             envelope.clock();
-            expect(envelope.output()).to.equal(15); // Decay level
+            expect(envelope.output()).toBe(15); // Decay level
             
             // Test: Loop=0, Constant=1, Volume=3
             envelope.setRegister(0x13); // 00010011
-            expect(envelope.output()).to.equal(3);
+            expect(envelope.output()).toBe(3);
         });
     });
 
     describe('constant volume mode', () => {
         it('should output volume directly when constant flag is set', () => {
             envelope.setRegister(0x1F); // Constant volume ON, volume = 15
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.setRegister(0x1A); // Constant volume ON, volume = 10
-            expect(envelope.output()).to.equal(10);
+            expect(envelope.output()).toBe(10);
             
             envelope.setRegister(0x10); // Constant volume ON, volume = 0
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should not be affected by envelope clocking in constant mode', () => {
             envelope.setRegister(0x18); // Constant volume ON, volume = 8
-            expect(envelope.output()).to.equal(8);
+            expect(envelope.output()).toBe(8);
             
             // Clock multiple times
             for (let i = 0; i < 20; i++) {
@@ -136,29 +133,29 @@ describe('EnvelopeUnit', () => {
             }
             
             // Should still output constant volume
-            expect(envelope.output()).to.equal(8);
+            expect(envelope.output()).toBe(8);
         });
 
         it('should not be affected by start flag in constant mode', () => {
             envelope.setRegister(0x1C); // Constant volume ON, volume = 12
-            expect(envelope.output()).to.equal(12);
+            expect(envelope.output()).toBe(12);
             
             envelope.setStartFlag();
             envelope.clock();
             
             // Should still output constant volume
-            expect(envelope.output()).to.equal(12);
+            expect(envelope.output()).toBe(12);
         });
 
         it('should immediately change output when volume is updated', () => {
             envelope.setRegister(0x15); // Constant volume ON, volume = 5
-            expect(envelope.output()).to.equal(5);
+            expect(envelope.output()).toBe(5);
             
             envelope.setRegister(0x1E); // Constant volume ON, volume = 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             
             envelope.setRegister(0x11); // Constant volume ON, volume = 1
-            expect(envelope.output()).to.equal(1);
+            expect(envelope.output()).toBe(1);
         });
     });
 
@@ -171,11 +168,11 @@ describe('EnvelopeUnit', () => {
             envelope.setStartFlag();
             envelope.clock(); // Start, decay = 15
             
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             // Clock to decay
             envelope.clock(); // Decay 15 -> 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
         });
 
         it('should use divider period from volume value', () => {
@@ -183,16 +180,16 @@ describe('EnvelopeUnit', () => {
             envelope.setRegister(0x02); // Envelope mode, period = 2
             envelope.setStartFlag();
             envelope.clock(); // Start, decay = 15, divider = 2
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.clock(); // Divider 2 -> 1
-            expect(envelope.output()).to.equal(15); // No decay yet
+            expect(envelope.output()).toBe(15); // No decay yet
             
             envelope.clock(); // Divider 1 -> 0
-            expect(envelope.output()).to.equal(15); // No decay yet
+            expect(envelope.output()).toBe(15); // No decay yet
             
             envelope.clock(); // Divider 0 -> reload to 2, decay 15 -> 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
         });
 
         it('should decay from 15 to 0 over time', () => {
@@ -202,11 +199,11 @@ describe('EnvelopeUnit', () => {
             
             // Decay all the way to 0
             for (let i = 15; i > 0; i--) {
-                expect(envelope.output()).to.equal(i);
+                expect(envelope.output()).toBe(i);
                 envelope.clock();
             }
             
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should reload divider when it reaches 0', () => {
@@ -219,33 +216,33 @@ describe('EnvelopeUnit', () => {
             envelope.clock(); // Divider 2 -> 1
             envelope.clock(); // Divider 1 -> 0
             envelope.clock(); // Divider 0 -> reload to 3, decay 15 -> 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             
             // Next cycle
             envelope.clock(); // Divider 3 -> 2
             envelope.clock(); // Divider 2 -> 1
             envelope.clock(); // Divider 1 -> 0
             envelope.clock(); // Divider 0 -> reload to 3, decay 14 -> 13
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
         });
 
         it('should decrement decay level when divider reaches 0', () => {
             envelope.setRegister(0x01); // Period = 1
             envelope.setStartFlag();
             envelope.clock(); // Start, decay = 15, divider = 1
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.clock(); // Divider 1 -> 0
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.clock(); // Divider 0 -> reload to 1, decay 15 -> 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             
             envelope.clock(); // Divider 1 -> 0
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             
             envelope.clock(); // Divider 0 -> reload to 1, decay 14 -> 13
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
         });
     });
 
@@ -256,24 +253,24 @@ describe('EnvelopeUnit', () => {
             
             // Next clock should restart envelope
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should reset decay level to 15 on start', () => {
             envelope.setRegister(0x00); // Envelope mode, period = 0
             envelope.setStartFlag();
             envelope.clock(); // Start, decay = 15
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             // Decay to lower level
             envelope.clock(); // Decay 15 -> 14
             envelope.clock(); // Decay 14 -> 13
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
             
             // Restart
             envelope.setStartFlag();
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should reset divider to period on start', () => {
@@ -287,7 +284,7 @@ describe('EnvelopeUnit', () => {
             envelope.clock(); // Divider 2 -> 1
             envelope.clock(); // Divider 1 -> 0
             envelope.clock(); // Divider 0 -> reload, decay
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
         });
 
         it('should clear start flag after first clock', () => {
@@ -295,13 +292,13 @@ describe('EnvelopeUnit', () => {
             envelope.setStartFlag();
             
             envelope.clock(); // Processes start flag, decay = 15, clears flag
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.clock(); // Normal operation, decay 15 -> 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             
             envelope.clock(); // Normal operation, decay 14 -> 13
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
         });
 
         it('should restart immediately on next clock after setStartFlag', () => {
@@ -313,14 +310,14 @@ describe('EnvelopeUnit', () => {
             envelope.clock();
             envelope.clock();
             envelope.clock();
-            expect(envelope.output()).to.equal(12);
+            expect(envelope.output()).toBe(12);
             
             // Set start flag and clock once
             envelope.setStartFlag();
             envelope.clock();
             
             // Should have restarted to 15
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should handle rapid restarts', () => {
@@ -329,19 +326,19 @@ describe('EnvelopeUnit', () => {
             // Restart multiple times
             envelope.setStartFlag();
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.setStartFlag();
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.setStartFlag();
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             // After last restart, should decay normally
             envelope.clock();
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
         });
     });
 
@@ -355,11 +352,11 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 15; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Next clock should wrap to 15
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should stay at 0 when loop is not set', () => {
@@ -371,14 +368,14 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 15; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Should stay at 0
             envelope.clock();
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             envelope.clock();
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should continue looping indefinitely when loop is set', () => {
@@ -390,19 +387,19 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 15; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Second cycle: wrap to 15, then 15 -> 0
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             for (let i = 0; i < 15; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Third cycle: wrap to 15 again
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should not decrement below 0 when loop is off', () => {
@@ -416,7 +413,7 @@ describe('EnvelopeUnit', () => {
             }
             
             // Should still be at 0
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
 
         it('should reload divider even when at 0 without loop', () => {
@@ -428,11 +425,11 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 50; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Divider should still be counting, just not decaying
             // We can't directly observe divider, but behavior should be stable
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
         });
     });
 
@@ -443,29 +440,29 @@ describe('EnvelopeUnit', () => {
             envelope.clock(); // Start, decay = 15, divider = 0
             
             // With period 0, divider is always 0, so decay happens every clock
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             envelope.clock();
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             envelope.clock();
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
         });
 
         it('should handle period = 15 (maximum)', () => {
             envelope.setRegister(0x0F); // Envelope mode, period = 15
             envelope.setStartFlag();
             envelope.clock(); // Start, decay = 15, divider = 15
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             // Should take 16 clocks before first decay (divider 15->0)
             for (let i = 0; i < 16; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
         });
 
         it('should handle switching from constant to envelope mode', () => {
             envelope.setRegister(0x1A); // Constant volume, volume = 10
-            expect(envelope.output()).to.equal(10);
+            expect(envelope.output()).toBe(10);
             
             // Switch to envelope mode
             envelope.setRegister(0x0A); // Envelope mode, period = 10
@@ -473,7 +470,7 @@ describe('EnvelopeUnit', () => {
             envelope.clock();
             
             // Should now use decay level
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should handle switching from envelope to constant mode', () => {
@@ -483,11 +480,11 @@ describe('EnvelopeUnit', () => {
             
             envelope.clock(); // Decay to 14
             envelope.clock(); // Decay to 13
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
             
             // Switch to constant mode
             envelope.setRegister(0x17); // Constant volume, volume = 7
-            expect(envelope.output()).to.equal(7);
+            expect(envelope.output()).toBe(7);
         });
 
         it('should handle changing period mid-decay', () => {
@@ -497,7 +494,7 @@ describe('EnvelopeUnit', () => {
             
             envelope.clock(); // Divider 1 -> 0
             envelope.clock(); // Divider 0 -> reload to 1, decay to 14
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
             
             // Change period to 5
             envelope.setRegister(0x05); // Period = 5
@@ -505,18 +502,18 @@ describe('EnvelopeUnit', () => {
             // Divider will reload to 5 next time it hits 0
             envelope.clock(); // Divider 1 -> 0
             envelope.clock(); // Divider 0 -> reload to 5, decay to 13
-            expect(envelope.output()).to.equal(13);
+            expect(envelope.output()).toBe(13);
         });
 
         it('should handle rapid register writes', () => {
             envelope.setRegister(0x1F); // Constant volume, volume = 15
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.setRegister(0x0A); // Envelope mode, period = 10
             envelope.setRegister(0x15); // Constant volume, volume = 5
             envelope.setRegister(0x17); // Constant volume, volume = 7
             
-            expect(envelope.output()).to.equal(7);
+            expect(envelope.output()).toBe(7);
         });
 
         it('should handle start flag set multiple times before clock', () => {
@@ -527,10 +524,10 @@ describe('EnvelopeUnit', () => {
             envelope.setStartFlag();
             
             envelope.clock(); // Should restart once
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
             
             envelope.clock(); // Normal decay
-            expect(envelope.output()).to.equal(14);
+            expect(envelope.output()).toBe(14);
         });
 
         it('should reset all state with reset()', () => {
@@ -543,12 +540,12 @@ describe('EnvelopeUnit', () => {
             envelope.reset();
             
             // Should be back to initial state
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Should be in envelope mode with period 0
             envelope.setStartFlag();
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
 
         it('should handle loop flag change mid-decay', () => {
@@ -560,7 +557,7 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 10; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(5);
+            expect(envelope.output()).toBe(5);
             
             // Enable loop
             envelope.setRegister(0x20); // Loop ON, period = 0
@@ -569,11 +566,11 @@ describe('EnvelopeUnit', () => {
             for (let i = 0; i < 5; i++) {
                 envelope.clock();
             }
-            expect(envelope.output()).to.equal(0);
+            expect(envelope.output()).toBe(0);
             
             // Should wrap since loop is now on
             envelope.clock();
-            expect(envelope.output()).to.equal(15);
+            expect(envelope.output()).toBe(15);
         });
     });
 });

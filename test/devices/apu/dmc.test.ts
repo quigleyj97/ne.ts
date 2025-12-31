@@ -1,7 +1,4 @@
-import chai from "chai";
-import { DmcChannel } from '../../../lib/devices/apu/channels/dmc.js';
-
-const expect = chai.expect;
+import { DmcChannel } from '../../../src/devices/apu/channels/dmc.js';
 
 /**
  * DmcChannel Unit Tests
@@ -21,19 +18,19 @@ describe('DmcChannel', () => {
 
     describe('Construction', () => {
         it('should construct a DMC channel', () => {
-            expect(dmc).to.be.instanceOf(DmcChannel);
+            expect(dmc).toBeInstanceOf(DmcChannel);
         });
 
         it('should start inactive', () => {
-            expect(dmc.isActive()).to.equal(false);
+            expect(dmc.isActive()).toBe(false);
         });
 
         it('should start with zero output', () => {
-            expect(dmc.output()).to.equal(0);
+            expect(dmc.output()).toBe(0);
         });
 
         it('should start with no IRQ pending', () => {
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
     });
 
@@ -57,7 +54,7 @@ describe('DmcChannel', () => {
             
             // After 428 clocks, timer expires and processes first bit
             // Output should have changed from 0 (bit 0 of 0xFF is 1, so increment by 2)
-            expect(dmc.output()).to.equal(2);
+            expect(dmc.output()).toBe(2);
         });
 
         it('should use rate index 8 (period 190)', () => {
@@ -74,7 +71,7 @@ describe('DmcChannel', () => {
             }
             
             // First bit processed (increment by 2)
-            expect(dmc.output()).to.equal(2);
+            expect(dmc.output()).toBe(2);
         });
 
         it('should use rate index 15 (period 54)', () => {
@@ -91,7 +88,7 @@ describe('DmcChannel', () => {
             }
             
             // First bit processed (increment by 2)
-            expect(dmc.output()).to.equal(2);
+            expect(dmc.output()).toBe(2);
         });
 
         it('should change rate when rate index is updated', () => {
@@ -110,7 +107,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.be.greaterThan(0);
+            expect(dmc.output()).toBeGreaterThan(0);
         });
     });
 
@@ -128,7 +125,7 @@ describe('DmcChannel', () => {
                 dmc.loadSampleByte(0xFF);
                 
                 // After byte is consumed, IRQ should be set
-                expect(dmc.getIrqFlag()).to.equal(true);
+                expect(dmc.getIrqFlag()).toBe(true);
             });
 
             it('should set loop enable flag (bit 6)', () => {
@@ -148,7 +145,7 @@ describe('DmcChannel', () => {
                 
                 // After sample completes, should restart (request same address)
                 const afterAddress = dmc.getDmaRequest();
-                expect(afterAddress).to.equal(initialAddress);
+                expect(afterAddress).toBe(initialAddress);
             });
 
             it('should set rate index (bits 0-3)', () => {
@@ -164,7 +161,7 @@ describe('DmcChannel', () => {
                     dmc.clock();
                 }
                 
-                expect(dmc.output()).to.equal(2);
+                expect(dmc.output()).toBe(2);
             });
 
             it('should clear IRQ when IRQ disabled', () => {
@@ -174,34 +171,34 @@ describe('DmcChannel', () => {
                 dmc.writeSampleLength(0);
                 dmc.start();
                 dmc.loadSampleByte(0xFF);
-                expect(dmc.getIrqFlag()).to.equal(true);
+                expect(dmc.getIrqFlag()).toBe(true);
                 
                 // Disable IRQ via control register
                 dmc.writeControl(0x00);
-                expect(dmc.getIrqFlag()).to.equal(false);
+                expect(dmc.getIrqFlag()).toBe(false);
             });
         });
 
         describe('$4011 - Direct Load', () => {
             it('should set output level directly', () => {
                 dmc.writeDirectLoad(0x50);
-                expect(dmc.output()).to.equal(0x50);
+                expect(dmc.output()).toBe(0x50);
             });
 
             it('should only use lower 7 bits', () => {
                 dmc.writeDirectLoad(0xFF);
-                expect(dmc.output()).to.equal(0x7F); // Only bits 0-6
+                expect(dmc.output()).toBe(0x7F); // Only bits 0-6
             });
 
             it('should work with various values', () => {
                 dmc.writeDirectLoad(0);
-                expect(dmc.output()).to.equal(0);
+                expect(dmc.output()).toBe(0);
                 
                 dmc.writeDirectLoad(64);
-                expect(dmc.output()).to.equal(64);
+                expect(dmc.output()).toBe(64);
                 
                 dmc.writeDirectLoad(127);
-                expect(dmc.output()).to.equal(127);
+                expect(dmc.output()).toBe(127);
             });
         });
 
@@ -212,7 +209,7 @@ describe('DmcChannel', () => {
                 dmc.start();
                 
                 // Should request from $C000
-                expect(dmc.getDmaRequest()).to.equal(0xC000);
+                expect(dmc.getDmaRequest()).toBe(0xC000);
             });
 
             it('should calculate address for value 128 ($E000)', () => {
@@ -220,7 +217,7 @@ describe('DmcChannel', () => {
                 dmc.writeSampleLength(0);
                 dmc.start();
                 
-                expect(dmc.getDmaRequest()).to.equal(0xE000);
+                expect(dmc.getDmaRequest()).toBe(0xE000);
             });
 
             it('should calculate address for value 255 ($FFC0)', () => {
@@ -228,7 +225,7 @@ describe('DmcChannel', () => {
                 dmc.writeSampleLength(0);
                 dmc.start();
                 
-                expect(dmc.getDmaRequest()).to.equal(0xFFC0);
+                expect(dmc.getDmaRequest()).toBe(0xFFC0);
             });
         });
 
@@ -238,9 +235,9 @@ describe('DmcChannel', () => {
                 dmc.writeSampleLength(0); // (0 * 16) + 1 = 1
                 dmc.start();
                 
-                expect(dmc.isActive()).to.equal(true);
+                expect(dmc.isActive()).toBe(true);
                 dmc.loadSampleByte(0xFF);
-                expect(dmc.isActive()).to.equal(false); // After 1 byte
+                expect(dmc.isActive()).toBe(false); // After 1 byte
             });
 
             it('should calculate length for value 128 (2049 bytes)', () => {
@@ -250,14 +247,14 @@ describe('DmcChannel', () => {
                 
                 // Load 2048 bytes
                 for (let i = 0; i < 2048; i++) {
-                    expect(dmc.isActive()).to.equal(true);
+                    expect(dmc.isActive()).toBe(true);
                     dmc.loadSampleByte(0);
                 }
                 
                 // After 2049th byte
-                expect(dmc.isActive()).to.equal(true);
+                expect(dmc.isActive()).toBe(true);
                 dmc.loadSampleByte(0);
-                expect(dmc.isActive()).to.equal(false);
+                expect(dmc.isActive()).toBe(false);
             });
 
             it('should calculate length for value 255 (4081 bytes)', () => {
@@ -270,9 +267,9 @@ describe('DmcChannel', () => {
                     dmc.loadSampleByte(0);
                 }
                 
-                expect(dmc.isActive()).to.equal(true);
+                expect(dmc.isActive()).toBe(true);
                 dmc.loadSampleByte(0);
-                expect(dmc.isActive()).to.equal(false);
+                expect(dmc.isActive()).toBe(false);
             });
         });
     });
@@ -294,7 +291,7 @@ describe('DmcChannel', () => {
             for (let i = 0; i < 428; i++) {
                 dmc.clock();
             }
-            expect(dmc.output()).to.equal(2); // Incremented by 2
+            expect(dmc.output()).toBe(2); // Incremented by 2
             
             // Next 7 bits are 0 (should decrement)
             for (let bit = 0; bit < 7; bit++) {
@@ -302,7 +299,7 @@ describe('DmcChannel', () => {
                     dmc.clock();
                 }
             }
-            expect(dmc.output()).to.equal(0); // Decremented back to 0
+            expect(dmc.output()).toBe(0); // Decremented back to 0
         });
 
         it('should empty buffer after 8 bits', () => {
@@ -331,19 +328,19 @@ describe('DmcChannel', () => {
             
             // Bit 0 = 0: decrement to 8
             for (let i = 0; i < 428; i++) dmc.clock();
-            expect(dmc.output()).to.equal(8);
+            expect(dmc.output()).toBe(8);
             
             // Bit 1 = 1: increment to 10
             for (let i = 0; i < 428; i++) dmc.clock();
-            expect(dmc.output()).to.equal(10);
+            expect(dmc.output()).toBe(10);
             
             // Bit 2 = 0: decrement to 8
             for (let i = 0; i < 428; i++) dmc.clock();
-            expect(dmc.output()).to.equal(8);
+            expect(dmc.output()).toBe(8);
             
             // Bit 3 = 1: increment to 10
             for (let i = 0; i < 428; i++) dmc.clock();
-            expect(dmc.output()).to.equal(10);
+            expect(dmc.output()).toBe(10);
         });
     });
 
@@ -364,7 +361,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(12); // 10 + 2
+            expect(dmc.output()).toBe(12); // 10 + 2
         });
 
         it('should decrement output by 2 when bit is 0', () => {
@@ -376,7 +373,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(8); // 10 - 2
+            expect(dmc.output()).toBe(8); // 10 - 2
         });
 
         it('should saturate at upper bound (126)', () => {
@@ -387,7 +384,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(126); // Saturated, no increment
+            expect(dmc.output()).toBe(126); // Saturated, no increment
         });
 
         it('should saturate at upper bound (127)', () => {
@@ -398,7 +395,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(127); // Saturated
+            expect(dmc.output()).toBe(127); // Saturated
         });
 
         it('should saturate at lower bound (0)', () => {
@@ -409,7 +406,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(0); // Saturated, no decrement
+            expect(dmc.output()).toBe(0); // Saturated, no decrement
         });
 
         it('should saturate at lower bound (1)', () => {
@@ -420,7 +417,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(1); // Saturated
+            expect(dmc.output()).toBe(1); // Saturated
         });
 
         it('should not saturate when incrementing from 125', () => {
@@ -431,7 +428,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(127); // Can increment to 127
+            expect(dmc.output()).toBe(127); // Can increment to 127
         });
 
         it('should not saturate when decrementing from 2', () => {
@@ -442,7 +439,7 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.output()).to.equal(0); // Can decrement to 0
+            expect(dmc.output()).toBe(0); // Can decrement to 0
         });
     });
 
@@ -452,7 +449,7 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(1);
             dmc.start();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC280);
+            expect(dmc.getDmaRequest()).toBe(0xC280);
         });
 
         it('should increment address after each byte', () => {
@@ -460,19 +457,19 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(2); // 3 bytes
             dmc.start();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC000);
+            expect(dmc.getDmaRequest()).toBe(0xC000);
             dmc.loadSampleByte(0);
             
             // Consume buffer to request next byte
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC001);
+            expect(dmc.getDmaRequest()).toBe(0xC001);
             dmc.loadSampleByte(0);
             
             // Consume buffer to request next byte
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC002);
+            expect(dmc.getDmaRequest()).toBe(0xC002);
         });
 
         it('should wrap from $FFFF to $8000', () => {
@@ -483,7 +480,7 @@ describe('DmcChannel', () => {
             // Load bytes until we reach $FFFF
             let address = 0xFFC0;
             while (address < 0xFFFF) {
-                expect(dmc.getDmaRequest()).to.equal(address);
+                expect(dmc.getDmaRequest()).toBe(address);
                 dmc.loadSampleByte(0);
                 // Consume buffer to request next byte
                 for (let i = 0; i < 8 * 428; i++) dmc.clock();
@@ -491,14 +488,14 @@ describe('DmcChannel', () => {
             }
             
             // At $FFFF
-            expect(dmc.getDmaRequest()).to.equal(0xFFFF);
+            expect(dmc.getDmaRequest()).toBe(0xFFFF);
             dmc.loadSampleByte(0);
             
             // Consume buffer to request next byte
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
             // Should wrap to $8000
-            expect(dmc.getDmaRequest()).to.equal(0x8000);
+            expect(dmc.getDmaRequest()).toBe(0x8000);
         });
 
         it('should continue incrementing after wraparound', () => {
@@ -513,17 +510,17 @@ describe('DmcChannel', () => {
                 for (let j = 0; j < 8 * 428; j++) dmc.clock();
             }
             
-            expect(dmc.getDmaRequest()).to.equal(0xFFFF);
+            expect(dmc.getDmaRequest()).toBe(0xFFFF);
             dmc.loadSampleByte(0);
             // Consume buffer
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
-            expect(dmc.getDmaRequest()).to.equal(0x8000);
+            expect(dmc.getDmaRequest()).toBe(0x8000);
             dmc.loadSampleByte(0);
             // Consume buffer
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
-            expect(dmc.getDmaRequest()).to.equal(0x8001);
+            expect(dmc.getDmaRequest()).toBe(0x8001);
         });
     });
 
@@ -534,14 +531,14 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(0); // 1 byte
             dmc.start();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC280);
+            expect(dmc.getDmaRequest()).toBe(0xC280);
             dmc.loadSampleByte(0);
             // Consume buffer - this should trigger loop restart
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
             // Should restart at sample address
-            expect(dmc.getDmaRequest()).to.equal(0xC280);
-            expect(dmc.isActive()).to.equal(true);
+            expect(dmc.getDmaRequest()).toBe(0xC280);
+            expect(dmc.isActive()).toBe(true);
         });
 
         it('should stop when loop disabled', () => {
@@ -553,8 +550,8 @@ describe('DmcChannel', () => {
             dmc.loadSampleByte(0);
             
             // Should stop
-            expect(dmc.isActive()).to.equal(false);
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.isActive()).toBe(false);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
 
         it('should not generate IRQ when loop enabled', () => {
@@ -566,8 +563,8 @@ describe('DmcChannel', () => {
             dmc.loadSampleByte(0);
             
             // Loop takes precedence over IRQ
-            expect(dmc.getIrqFlag()).to.equal(false);
-            expect(dmc.isActive()).to.equal(true);
+            expect(dmc.getIrqFlag()).toBe(false);
+            expect(dmc.isActive()).toBe(true);
         });
 
         it('should maintain loop through multiple iterations', () => {
@@ -580,13 +577,13 @@ describe('DmcChannel', () => {
             
             // Several iterations
             for (let i = 0; i < 5; i++) {
-                expect(dmc.getDmaRequest()).to.equal(expectedAddress);
+                expect(dmc.getDmaRequest()).toBe(expectedAddress);
                 dmc.loadSampleByte(0);
                 // Consume buffer
                 for (let j = 0; j < 8 * 428; j++) dmc.clock();
             }
             
-            expect(dmc.isActive()).to.equal(true);
+            expect(dmc.isActive()).toBe(true);
         });
     });
 
@@ -597,9 +594,9 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(0);
             dmc.start();
             
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
             dmc.loadSampleByte(0);
-            expect(dmc.getIrqFlag()).to.equal(true);
+            expect(dmc.getIrqFlag()).toBe(true);
         });
 
         it('should not generate IRQ when IRQ disabled', () => {
@@ -609,7 +606,7 @@ describe('DmcChannel', () => {
             dmc.start();
             
             dmc.loadSampleByte(0);
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
 
         it('should not generate IRQ when loop enabled', () => {
@@ -619,7 +616,7 @@ describe('DmcChannel', () => {
             dmc.start();
             
             dmc.loadSampleByte(0);
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
 
         it('should clear IRQ when disabled via $4010', () => {
@@ -629,10 +626,10 @@ describe('DmcChannel', () => {
             dmc.start();
             dmc.loadSampleByte(0);
             
-            expect(dmc.getIrqFlag()).to.equal(true);
+            expect(dmc.getIrqFlag()).toBe(true);
             
             dmc.writeControl(0x00); // Disable IRQ
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
 
         it('should clear IRQ via clearIrq method', () => {
@@ -642,9 +639,9 @@ describe('DmcChannel', () => {
             dmc.start();
             dmc.loadSampleByte(0);
             
-            expect(dmc.getIrqFlag()).to.equal(true);
+            expect(dmc.getIrqFlag()).toBe(true);
             dmc.clearIrq();
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
 
         it('should remain clear after clearIrq', () => {
@@ -655,12 +652,12 @@ describe('DmcChannel', () => {
             dmc.loadSampleByte(0);
             
             dmc.clearIrq();
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
             
             // Multiple clears shouldn't cause issues
             dmc.clearIrq();
             dmc.clearIrq();
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
     });
 
@@ -673,7 +670,7 @@ describe('DmcChannel', () => {
             dmc.loadSampleByte(0xFF);
             
             // Buffer has 8 bits remaining, no DMA needed
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
 
         it('should not request DMA when bytesRemaining is 0', () => {
@@ -683,7 +680,7 @@ describe('DmcChannel', () => {
             dmc.loadSampleByte(0);
             
             // Sample complete, no more bytes
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
 
         it('should request DMA when buffer empty and bytes remaining', () => {
@@ -692,7 +689,7 @@ describe('DmcChannel', () => {
             dmc.start();
             
             // Buffer starts empty
-            expect(dmc.getDmaRequest()).to.equal(0xC000 + (5 * 64));
+            expect(dmc.getDmaRequest()).toBe(0xC000 + (5 * 64));
         });
 
         it('should request next address after buffer consumption', () => {
@@ -711,7 +708,7 @@ describe('DmcChannel', () => {
             }
             
             // Should request next byte
-            expect(dmc.getDmaRequest()).to.equal(0xC001);
+            expect(dmc.getDmaRequest()).toBe(0xC001);
         });
 
         it('should clear DMA request after loadSampleByte', () => {
@@ -721,7 +718,7 @@ describe('DmcChannel', () => {
             
             expect(dmc.getDmaRequest()).to.not.equal(null);
             dmc.loadSampleByte(0xFF);
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
 
         it('should handle multiple DMA requests in sequence', () => {
@@ -729,36 +726,36 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(2); // 3 bytes
             dmc.start();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC000);
+            expect(dmc.getDmaRequest()).toBe(0xC000);
             dmc.loadSampleByte(0);
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.getDmaRequest()).toBe(null);
             
             // Fast-forward buffer consumption
             for (let i = 0; i < 8 * 428; i++) dmc.clock();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC001);
+            expect(dmc.getDmaRequest()).toBe(0xC001);
             dmc.loadSampleByte(0);
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
     });
 
     describe('DMC Direct Load ($4011)', () => {
         it('should immediately set output level', () => {
-            expect(dmc.output()).to.equal(0);
+            expect(dmc.output()).toBe(0);
             
             dmc.writeDirectLoad(50);
-            expect(dmc.output()).to.equal(50);
+            expect(dmc.output()).toBe(50);
         });
 
         it('should only use lower 7 bits (0x7F mask)', () => {
             dmc.writeDirectLoad(0xFF);
-            expect(dmc.output()).to.equal(0x7F);
+            expect(dmc.output()).toBe(0x7F);
             
             dmc.writeDirectLoad(0x80);
-            expect(dmc.output()).to.equal(0x00);
+            expect(dmc.output()).toBe(0x00);
             
             dmc.writeDirectLoad(0xAA);
-            expect(dmc.output()).to.equal(0x2A);
+            expect(dmc.output()).toBe(0x2A);
         });
 
         it('should work during sample playback', () => {
@@ -770,19 +767,19 @@ describe('DmcChannel', () => {
             
             // Set direct load during playback
             dmc.writeDirectLoad(100);
-            expect(dmc.output()).to.equal(100);
+            expect(dmc.output()).toBe(100);
             
             // Sample playback continues from new level
             for (let i = 0; i < 428; i++) {
                 dmc.clock();
             }
-            expect(dmc.output()).to.equal(102); // Incremented by 2
+            expect(dmc.output()).toBe(102); // Incremented by 2
         });
 
         it('should allow setting any value 0-127', () => {
             for (let i = 0; i <= 127; i++) {
                 dmc.writeDirectLoad(i);
-                expect(dmc.output()).to.equal(i);
+                expect(dmc.output()).toBe(i);
             }
         });
     });
@@ -792,10 +789,10 @@ describe('DmcChannel', () => {
             dmc.writeSampleAddress(10);
             dmc.writeSampleLength(5);
             
-            expect(dmc.isActive()).to.equal(false);
+            expect(dmc.isActive()).toBe(false);
             
             dmc.start();
-            expect(dmc.isActive()).to.equal(true);
+            expect(dmc.isActive()).toBe(true);
         });
 
         it('should not restart if already playing', () => {
@@ -804,7 +801,7 @@ describe('DmcChannel', () => {
             dmc.start();
             
             dmc.loadSampleByte(0); // Consume 1 byte, 10 remaining
-            expect(dmc.isActive()).to.equal(true);
+            expect(dmc.isActive()).toBe(true);
             
             // Change sample parameters
             dmc.writeSampleAddress(100);
@@ -822,7 +819,7 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(5);
             dmc.start();
             
-            expect(dmc.isActive()).to.equal(true);
+            expect(dmc.isActive()).toBe(true);
         });
 
         it('should report inactive when bytesRemaining is 0', () => {
@@ -831,7 +828,7 @@ describe('DmcChannel', () => {
             dmc.start();
             dmc.loadSampleByte(0);
             
-            expect(dmc.isActive()).to.equal(false);
+            expect(dmc.isActive()).toBe(false);
         });
 
         it('should allow restart after sample completes', () => {
@@ -845,15 +842,15 @@ describe('DmcChannel', () => {
                 dmc.clock();
             }
             
-            expect(dmc.isActive()).to.equal(false);
+            expect(dmc.isActive()).toBe(false);
             
             // Start new sample
             dmc.writeSampleAddress(5);
             dmc.writeSampleLength(0);
             dmc.start();
             
-            expect(dmc.isActive()).to.equal(true);
-            expect(dmc.getDmaRequest()).to.equal(0xC000 + (5 * 64));
+            expect(dmc.isActive()).toBe(true);
+            expect(dmc.getDmaRequest()).toBe(0xC000 + (5 * 64));
         });
     });
 
@@ -871,17 +868,17 @@ describe('DmcChannel', () => {
             dmc.reset();
             
             // State should be cleared
-            expect(dmc.isActive()).to.equal(false);
-            expect(dmc.getIrqFlag()).to.equal(false);
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.isActive()).toBe(false);
+            expect(dmc.getIrqFlag()).toBe(false);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
 
         it('should reset output level to 0', () => {
             dmc.writeDirectLoad(100);
-            expect(dmc.output()).to.equal(100);
+            expect(dmc.output()).toBe(100);
             
             dmc.reset();
-            expect(dmc.output()).to.equal(0);
+            expect(dmc.output()).toBe(0);
         });
 
         it('should clear IRQ flag', () => {
@@ -891,10 +888,10 @@ describe('DmcChannel', () => {
             dmc.start();
             dmc.loadSampleByte(0);
             
-            expect(dmc.getIrqFlag()).to.equal(true);
+            expect(dmc.getIrqFlag()).toBe(true);
             
             dmc.reset();
-            expect(dmc.getIrqFlag()).to.equal(false);
+            expect(dmc.getIrqFlag()).toBe(false);
         });
 
         it('should reset timer state', () => {
@@ -916,7 +913,7 @@ describe('DmcChannel', () => {
             for (let i = 0; i < 428; i++) {
                 dmc.clock();
             }
-            expect(dmc.output()).to.equal(2);
+            expect(dmc.output()).toBe(2);
         });
 
         it('should allow normal operation after reset', () => {
@@ -934,18 +931,18 @@ describe('DmcChannel', () => {
             dmc.writeSampleLength(0);
             dmc.start();
             
-            expect(dmc.getDmaRequest()).to.equal(0xC000);
+            expect(dmc.getDmaRequest()).toBe(0xC000);
             dmc.loadSampleByte(0xFF);
-            expect(dmc.isActive()).to.equal(false);
+            expect(dmc.isActive()).toBe(false);
         });
 
         it('should reset to power-on state', () => {
             dmc.reset();
             
-            expect(dmc.output()).to.equal(0);
-            expect(dmc.isActive()).to.equal(false);
-            expect(dmc.getIrqFlag()).to.equal(false);
-            expect(dmc.getDmaRequest()).to.equal(null);
+            expect(dmc.output()).toBe(0);
+            expect(dmc.isActive()).toBe(false);
+            expect(dmc.getIrqFlag()).toBe(false);
+            expect(dmc.getDmaRequest()).toBe(null);
         });
     });
 });

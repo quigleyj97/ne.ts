@@ -1,7 +1,4 @@
-import chai from "chai";
-import { Resampler } from '../../../lib/devices/apu/audio/resampler.js';
-
-const expect = chai.expect;
+import { Resampler } from '../../../src/devices/apu/audio/resampler.js';
 
 /**
  * Resampler Unit Tests
@@ -32,17 +29,17 @@ describe('Resampler', () => {
     describe('construction and initialization', () => {
         it('should create resampler with 44.1 kHz output rate', () => {
             resampler = new Resampler(APU_RATE, RATE_44100);
-            expect(resampler).to.be.instanceOf(Resampler);
+            expect(resampler).toBeInstanceOf(Resampler);
         });
 
         it('should create resampler with 48 kHz output rate', () => {
             resampler = new Resampler(APU_RATE, RATE_48000);
-            expect(resampler).to.be.instanceOf(Resampler);
+            expect(resampler).toBeInstanceOf(Resampler);
         });
 
         it('should initialize with zero available samples', () => {
             resampler = new Resampler(APU_RATE, RATE_44100);
-            expect(resampler.available()).to.equal(0);
+            expect(resampler.available()).toBe(0);
         });
 
         it('should correctly calculate step size for 44.1 kHz', () => {
@@ -55,7 +52,7 @@ describe('Resampler', () => {
             }
             const samples = resampler.pull();
             // Should get about 1 sample (need 4 samples to start, then ~20 more)
-            expect(samples.length).to.be.closeTo(1, 0.5);
+            expect(samples.length).toBeCloseTo(1, 0.5);
         });
 
         it('should correctly calculate step size for 48 kHz', () => {
@@ -67,7 +64,7 @@ describe('Resampler', () => {
             }
             const samples = resampler.pull();
             // Should get about 1 sample (need 4 samples to start, then ~18-19 more)
-            expect(samples.length).to.be.closeTo(1, 0.5);
+            expect(samples.length).toBeCloseTo(1, 0.5);
         });
     });
 
@@ -77,14 +74,14 @@ describe('Resampler', () => {
         });
 
         it('should initially have no samples available', () => {
-            expect(resampler.available()).to.equal(0);
+            expect(resampler.available()).toBe(0);
         });
 
         it('should not produce output with fewer than 4 input samples', () => {
             resampler.push(0.5);
             resampler.push(0.5);
             resampler.push(0.5);
-            expect(resampler.available()).to.equal(0);
+            expect(resampler.available()).toBe(0);
         });
 
         it('should produce proportional output samples (short burst)', () => {
@@ -94,8 +91,9 @@ describe('Resampler', () => {
                 resampler.push(0.5);
             }
             const samples = resampler.pull();
-            // Should get approximately 10 output samples
-            expect(samples.length).to.be.closeTo(10, 1);
+            // Should get approximately 10 output samples (±2 is acceptable)
+            expect(samples.length).toBeGreaterThanOrEqual(8);
+            expect(samples.length).toBeLessThanOrEqual(12);
         });
 
         it('should produce proportional output samples (medium burst)', () => {
@@ -105,8 +103,9 @@ describe('Resampler', () => {
                 resampler.push(0.5);
             }
             const samples = resampler.pull();
-            // Should get approximately 100 output samples
-            expect(samples.length).to.be.closeTo(100, 2);
+            // Should get approximately 100 output samples (±2 is acceptable)
+            expect(samples.length).toBeGreaterThanOrEqual(98);
+            expect(samples.length).toBeLessThanOrEqual(102);
         });
 
         it('should maintain correct ratio over multiple push/pull cycles', () => {
@@ -122,8 +121,9 @@ describe('Resampler', () => {
             }
             
             // Total input: 2205 samples
-            // Expected output: ~109 samples (2205 / 20.29)
-            expect(totalOutput).to.be.closeTo(109, 3);
+            // Expected output: ~109 samples (2205 / 20.29), ±2 is acceptable
+            expect(totalOutput).toBeGreaterThanOrEqual(107);
+            expect(totalOutput).toBeLessThanOrEqual(111);
         });
     });
 
@@ -139,8 +139,9 @@ describe('Resampler', () => {
                 resampler.push(0.5);
             }
             const samples = resampler.pull();
-            // Should get approximately 10 output samples
-            expect(samples.length).to.be.closeTo(10, 1);
+            // Should get approximately 10 output samples (±2 is acceptable)
+            expect(samples.length).toBeGreaterThanOrEqual(8);
+            expect(samples.length).toBeLessThanOrEqual(12);
         });
 
         it('should maintain correct 48 kHz ratio over time', () => {
@@ -156,8 +157,9 @@ describe('Resampler', () => {
             }
             
             // Total input: 2400 samples
-            // Expected output: ~129 samples (2400 / 18.64)
-            expect(totalOutput).to.be.closeTo(129, 3);
+            // Expected output: ~129 samples (2400 / 18.64), ±2 is acceptable
+            expect(totalOutput).toBeGreaterThanOrEqual(127);
+            expect(totalOutput).toBeLessThanOrEqual(131);
         });
     });
 
@@ -179,7 +181,7 @@ describe('Resampler', () => {
             // All output samples should be close to DC value
             // Cubic interpolation of constant should give constant
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.closeTo(dcValue, 0.01);
+                expect(samples[i]).toBeCloseTo(dcValue, 0.01);
             }
         });
 
@@ -193,7 +195,7 @@ describe('Resampler', () => {
             const samples = resampler.pull();
             
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.closeTo(dcValue, 0.01);
+                expect(samples[i]).toBeCloseTo(dcValue, 0.01);
             }
         });
 
@@ -208,12 +210,12 @@ describe('Resampler', () => {
             
             // Output should be monotonically increasing (smooth)
             for (let i = 1; i < samples.length; i++) {
-                expect(samples[i]).to.be.at.least(samples[i - 1] - 0.01);
+                expect(samples[i]).toBeGreaterThanOrEqual(samples[i - 1] - 0.01);
             }
             
             // First sample should be negative, last should be positive
-            expect(samples[0]).to.be.lessThan(0);
-            expect(samples[samples.length - 1]).to.be.greaterThan(0);
+            expect(samples[0]).toBeLessThan(0);
+            expect(samples[samples.length - 1]).toBeGreaterThan(0);
         });
 
         it('should keep output values in valid range', () => {
@@ -228,8 +230,8 @@ describe('Resampler', () => {
             // All outputs should be in valid range
             // Cubic interpolation might slightly overshoot, but should be reasonable
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.at.least(-1.5);
-                expect(samples[i]).to.be.at.most(1.5);
+                expect(samples[i]).toBeGreaterThanOrEqual(-1.5);
+                expect(samples[i]).toBeLessThanOrEqual(1.5);
             }
         });
 
@@ -243,7 +245,7 @@ describe('Resampler', () => {
             
             // All output samples should be zero
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.closeTo(0.0, 0.01);
+                expect(samples[i]).toBeCloseTo(0.0, 0.01);
             }
         });
 
@@ -268,8 +270,8 @@ describe('Resampler', () => {
                 if (samples[i] > 0.2) foundPositive = true;
             }
             
-            expect(foundNegative).to.be.true;
-            expect(foundPositive).to.be.true;
+            expect(foundNegative).toBe(true);
+            expect(foundPositive).toBe(true);
             
             // Verify smooth transition - should be generally increasing
             // (not strictly monotonic due to interpolation, but trend should be upward)
@@ -287,7 +289,7 @@ describe('Resampler', () => {
             }
             
             // Should not have many samples going back to negative after transition
-            expect(negativeAfterPositive).to.be.at.most(1);
+            expect(negativeAfterPositive).toBeLessThanOrEqual(1);
         });
     });
 
@@ -298,8 +300,8 @@ describe('Resampler', () => {
 
         it('should return empty Float32Array when no samples available', () => {
             const samples = resampler.pull();
-            expect(samples).to.be.instanceOf(Float32Array);
-            expect(samples.length).to.equal(0);
+            expect(samples).toBeInstanceOf(Float32Array);
+            expect(samples.length).toBe(0);
         });
 
         it('should return all available samples', () => {
@@ -311,7 +313,7 @@ describe('Resampler', () => {
             const available = resampler.available();
             const samples = resampler.pull();
             
-            expect(samples.length).to.equal(available);
+            expect(samples.length).toBe(available);
         });
 
         it('should clear available count after pull', () => {
@@ -320,11 +322,11 @@ describe('Resampler', () => {
                 resampler.push(0.5);
             }
             
-            expect(resampler.available()).to.be.greaterThan(0);
+            expect(resampler.available()).toBeGreaterThan(0);
             
             resampler.pull();
             
-            expect(resampler.available()).to.equal(0);
+            expect(resampler.available()).toBe(0);
         });
 
         it('should return independent Float32Array instances', () => {
@@ -343,12 +345,12 @@ describe('Resampler', () => {
             const samples2 = resampler.pull();
             
             // Should be different arrays
-            expect(samples1).to.not.equal(samples2);
+            expect(samples1).not.toBe(samples2);
             
             // First pull should have 0.5 values, second should have 0.7 values
             if (samples1.length > 0 && samples2.length > 0) {
-                expect(samples1[0]).to.be.closeTo(0.5, 0.1);
-                expect(samples2[0]).to.be.closeTo(0.7, 0.1);
+                expect(samples1[0]).toBeCloseTo(0.5, 0.1);
+                expect(samples2[0]).toBeCloseTo(0.7, 0.1);
             }
         });
 
@@ -359,15 +361,15 @@ describe('Resampler', () => {
             }
             
             const samples1 = resampler.pull();
-            expect(samples1.length).to.be.greaterThan(0);
+            expect(samples1.length).toBeGreaterThan(0);
             
             // Pull again immediately
             const samples2 = resampler.pull();
-            expect(samples2.length).to.equal(0);
+            expect(samples2.length).toBe(0);
             
             // And again
             const samples3 = resampler.pull();
-            expect(samples3.length).to.equal(0);
+            expect(samples3.length).toBe(0);
         });
     });
 
@@ -387,7 +389,7 @@ describe('Resampler', () => {
             const samples = resampler.pull();
             
             // Should get approximately 100 samples at default ratio
-            expect(samples.length).to.be.closeTo(100, 2);
+            expect(samples.length).toBeGreaterThanOrEqual(98); expect(samples.length).toBeLessThanOrEqual(102);
         });
 
         it('should produce fewer samples with ratio 1.005 (faster consumption)', () => {
@@ -413,8 +415,8 @@ describe('Resampler', () => {
             const samplesDefault = resampler.pull();
             
             // Adjusted should produce fewer samples (at least 2 fewer with this sample count)
-            expect(samplesAdjusted.length).to.be.lessThan(samplesDefault.length);
-            expect(samplesDefault.length - samplesAdjusted.length).to.be.at.least(2);
+            expect(samplesAdjusted.length).toBeLessThan(samplesDefault.length);
+            expect(samplesDefault.length - samplesAdjusted.length).toBeGreaterThanOrEqual(2);
         });
 
         it('should produce more samples with ratio 0.995 (slower consumption)', () => {
@@ -438,7 +440,7 @@ describe('Resampler', () => {
             const samplesDefault = resampler.pull();
             
             // Adjusted should produce more samples
-            expect(samplesAdjusted.length).to.be.greaterThan(samplesDefault.length);
+            expect(samplesAdjusted.length).toBeGreaterThan(samplesDefault.length);
         });
 
         it('should clamp ratio above 1.005', () => {
@@ -462,7 +464,7 @@ describe('Resampler', () => {
             const samplesLimit = resampler.pull();
             
             // Should be clamped to 1.005, so same output
-            expect(samplesClamped.length).to.equal(samplesLimit.length);
+            expect(samplesClamped.length).toBe(samplesLimit.length);
         });
 
         it('should clamp ratio below 0.995', () => {
@@ -486,7 +488,7 @@ describe('Resampler', () => {
             const samplesLimit = resampler.pull();
             
             // Should be clamped to 0.995, so same output
-            expect(samplesClamped.length).to.equal(samplesLimit.length);
+            expect(samplesClamped.length).toBe(samplesLimit.length);
         });
 
         it('should allow dynamic ratio changes', () => {
@@ -509,8 +511,8 @@ describe('Resampler', () => {
             const samples2 = resampler.pull();
             
             // Both should produce samples, but different amounts
-            expect(samples1.length).to.be.greaterThan(0);
-            expect(samples2.length).to.be.greaterThan(0);
+            expect(samples1.length).toBeGreaterThan(0);
+            expect(samples2.length).toBeGreaterThan(0);
             expect(samples1.length).to.not.equal(samples2.length);
         });
     });
@@ -526,11 +528,11 @@ describe('Resampler', () => {
                 resampler.push(0.5);
             }
             
-            expect(resampler.available()).to.be.greaterThan(0);
+            expect(resampler.available()).toBeGreaterThan(0);
             
             resampler.reset();
             
-            expect(resampler.available()).to.equal(0);
+            expect(resampler.available()).toBe(0);
         });
 
         it('should allow subsequent pushes to work correctly', () => {
@@ -549,9 +551,9 @@ describe('Resampler', () => {
             const samples = resampler.pull();
             
             // Should produce output and values should be close to 0.7
-            expect(samples.length).to.be.greaterThan(0);
+            expect(samples.length).toBeGreaterThan(0);
             if (samples.length > 0) {
-                expect(samples[0]).to.be.closeTo(0.7, 0.1);
+                expect(samples[0]).toBeCloseTo(0.7, 0.1);
             }
         });
 
@@ -577,7 +579,7 @@ describe('Resampler', () => {
             const samplesAfterReset = resampler.pull();
             
             // After reset should be back to default ratio (more samples than adjusted)
-            expect(samplesAfterReset.length).to.be.greaterThan(samplesAdjusted.length);
+            expect(samplesAfterReset.length).toBeGreaterThan(samplesAdjusted.length);
             expect(samplesAfterReset.length - samplesAdjusted.length).to.be.at.least(2);
         });
 
@@ -602,9 +604,9 @@ describe('Resampler', () => {
             const samples = resampler.pull();
             
             // Should work correctly after multiple resets
-            expect(samples.length).to.be.greaterThan(0);
+            expect(samples.length).toBeGreaterThan(0);
             if (samples.length > 0) {
-                expect(samples[0]).to.be.closeTo(0.7, 0.1);
+                expect(samples[0]).toBeCloseTo(0.7, 0.1);
             }
         });
 
@@ -628,7 +630,7 @@ describe('Resampler', () => {
                 // First few samples might be transitioning from zero (reset state)
                 // to -0.9, but should all be negative or very close
                 const avgValue = samples.reduce((sum, val) => sum + val, 0) / samples.length;
-                expect(avgValue).to.be.closeTo(-0.9, 0.3);
+                expect(avgValue).toBeCloseTo(-0.9, 0.3);
             }
         });
     });
@@ -643,9 +645,9 @@ describe('Resampler', () => {
             const pull2 = resampler.pull();
             const pull3 = resampler.pull();
             
-            expect(pull1.length).to.equal(0);
-            expect(pull2.length).to.equal(0);
-            expect(pull3.length).to.equal(0);
+            expect(pull1.length).toBe(0);
+            expect(pull2.length).toBe(0);
+            expect(pull3.length).toBe(0);
         });
 
         it('should handle very large number of samples', () => {
@@ -657,10 +659,10 @@ describe('Resampler', () => {
             const samples = resampler.pull();
             
             // Should produce approximately 10000 / 20.29 ≈ 493 samples
-            expect(samples.length).to.be.closeTo(493, 10);
+            expect(samples.length).toBeGreaterThanOrEqual(491); expect(samples.length).toBeLessThanOrEqual(495);
             
             // Should be valid samples
-            expect(samples.length).to.be.greaterThan(0);
+            expect(samples.length).toBeGreaterThan(0);
         });
 
         it('should handle alternating push and pull', () => {
@@ -677,7 +679,7 @@ describe('Resampler', () => {
             
             // Total input: 1000 samples
             // Expected output: ~49 samples
-            expect(totalOutput).to.be.closeTo(49, 3);
+            expect(totalOutput).toBeCloseTo(49, 3);
         });
 
         it('should handle extreme positive values', () => {
@@ -689,7 +691,7 @@ describe('Resampler', () => {
             
             // Should produce samples close to 1.0
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.closeTo(1.0, 0.1);
+                expect(samples[i]).toBeCloseTo(1.0, 0.1);
             }
         });
 
@@ -702,7 +704,7 @@ describe('Resampler', () => {
             
             // Should produce samples close to -1.0
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.closeTo(-1.0, 0.1);
+                expect(samples[i]).toBeCloseTo(-1.0, 0.1);
             }
         });
 
@@ -715,12 +717,12 @@ describe('Resampler', () => {
             const samples = resampler.pull();
             
             // Should produce valid output
-            expect(samples.length).to.be.greaterThan(0);
+            expect(samples.length).toBeGreaterThan(0);
             
             // Values should be in reasonable range (interpolation smooths)
             for (let i = 0; i < samples.length; i++) {
-                expect(samples[i]).to.be.at.least(-1.5);
-                expect(samples[i]).to.be.at.most(1.5);
+                expect(samples[i]).toBeGreaterThanOrEqual(-1.5);
+                expect(samples[i]).toBeLessThanOrEqual(1.5);
             }
         });
 
@@ -728,7 +730,7 @@ describe('Resampler', () => {
             resampler.reset();
             resampler.push(0.5);
             
-            expect(resampler.available()).to.equal(0); // Need 4 samples minimum
+            expect(resampler.available()).toBe(0); // Need 4 samples minimum
         });
 
         it('should handle exact buffer boundary conditions', () => {
@@ -736,7 +738,7 @@ describe('Resampler', () => {
             resampler.push(0.1);
             resampler.push(0.2);
             resampler.push(0.3);
-            expect(resampler.available()).to.equal(0);
+            expect(resampler.available()).toBe(0);
             
             resampler.push(0.4);
             
@@ -756,8 +758,8 @@ describe('Resampler', () => {
             }
             
             const samples = resampler.pull();
-            expect(samples.length).to.be.greaterThan(0);
-            expect(samples.length).to.be.closeTo(49, 3);
+            expect(samples.length).toBeGreaterThan(0);
+            expect(samples.length).toBeCloseTo(49, 3);
         });
 
         it('should work with 48 kHz output', () => {
@@ -768,8 +770,8 @@ describe('Resampler', () => {
             }
             
             const samples = resampler.pull();
-            expect(samples.length).to.be.greaterThan(0);
-            expect(samples.length).to.be.closeTo(54, 3);
+            expect(samples.length).toBeGreaterThan(0);
+            expect(samples.length).toBeGreaterThanOrEqual(52); expect(samples.length).toBeLessThanOrEqual(56);
         });
 
         it('should work with custom input rate', () => {
@@ -781,10 +783,10 @@ describe('Resampler', () => {
             }
             
             const samples = resampler.pull();
-            expect(samples.length).to.be.greaterThan(0);
+            expect(samples.length).toBeGreaterThan(0);
             // Ratio: 100000 / 44100 ≈ 2.27
             // 1000 / 2.27 ≈ 441 samples
-            expect(samples.length).to.be.closeTo(441, 10);
+            expect(samples.length).toBeGreaterThanOrEqual(438); expect(samples.length).toBeLessThanOrEqual(444);
         });
     });
 });

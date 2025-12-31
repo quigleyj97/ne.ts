@@ -1,7 +1,4 @@
-import chai from "chai";
-import { TriangleChannel } from '../../../lib/devices/apu/channels/triangle.js';
-
-const expect = chai.expect;
+import { TriangleChannel } from '../../../src/devices/apu/channels/triangle.js';
 
 /**
  * TriangleChannel Unit Tests
@@ -20,19 +17,19 @@ describe('TriangleChannel', () => {
 
     describe('Construction', () => {
         it('should construct a triangle channel', () => {
-            expect(triangle).to.be.instanceOf(TriangleChannel);
+            expect(triangle).toBeInstanceOf(TriangleChannel);
         });
 
         it('should start disabled', () => {
-            expect(triangle.isEnabled()).to.equal(false);
+            expect(triangle.isEnabled()).toBe(false);
         });
 
         it('should start with zero output', () => {
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should start with zero length counter', () => {
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
         });
     });
 
@@ -64,7 +61,7 @@ describe('TriangleChannel', () => {
                 }
             }
             
-            expect(actual).to.deep.equal(expected);
+            expect(actual).toEqual(expected);
         });
 
         it('should wrap sequence after 32 steps', () => {
@@ -76,12 +73,12 @@ describe('TriangleChannel', () => {
             }
             
             // Should wrap back to position 0 (value 15)
-            expect(triangle.output()).to.equal(15);
+            expect(triangle.output()).toBe(15);
         });
 
         it('should output correct values at specific positions', () => {
             // Position 0: 15
-            expect(triangle.output()).to.equal(15);
+            expect(triangle.output()).toBe(15);
             
             // Advance to position 8
             for (let i = 0; i < 8; i++) {
@@ -89,7 +86,7 @@ describe('TriangleChannel', () => {
                     triangle.clock();
                 }
             }
-            expect(triangle.output()).to.equal(7);
+            expect(triangle.output()).toBe(7);
             
             // Advance to position 15
             for (let i = 0; i < 7; i++) {
@@ -97,13 +94,13 @@ describe('TriangleChannel', () => {
                     triangle.clock();
                 }
             }
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // Advance to position 16 (start of second half)
             for (let j = 0; j <= 0x10; j++) {
                 triangle.clock();
             }
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // Advance to position 24
             for (let i = 0; i < 8; i++) {
@@ -111,7 +108,7 @@ describe('TriangleChannel', () => {
                     triangle.clock();
                 }
             }
-            expect(triangle.output()).to.equal(8);
+            expect(triangle.output()).toBe(8);
         });
 
         it('should not reset sequencer position on timer high write', () => {
@@ -123,14 +120,14 @@ describe('TriangleChannel', () => {
             }
             
             // Position 5 should be 10
-            expect(triangle.output()).to.equal(10);
+            expect(triangle.output()).toBe(10);
             
             // Write timer high (unlike pulse channel, this doesn't reset position)
             triangle.writeTimerHigh(0x08);
             triangle.clockLinearCounter(); // Reload linear counter
             
             // Should still be at position 5
-            expect(triangle.output()).to.equal(10);
+            expect(triangle.output()).toBe(10);
         });
     });
 
@@ -165,20 +162,20 @@ describe('TriangleChannel', () => {
             triangle.clockLinearCounter();
             
             // Timer counter starts at 0, so first clock advances immediately
-            expect(triangle.output()).to.equal(15); // Position 0
+            expect(triangle.output()).toBe(15); // Position 0
             
             triangle.clock(); // Counter 0 -> reload to 3, advance to position 1
-            expect(triangle.output()).to.equal(14); // Position 1
+            expect(triangle.output()).toBe(14); // Position 1
             
             // Next 3 clocks count down without advancing
             triangle.clock(); // 3 -> 2
             triangle.clock(); // 2 -> 1
             triangle.clock(); // 1 -> 0
-            expect(triangle.output()).to.equal(14); // Still position 1
+            expect(triangle.output()).toBe(14); // Still position 1
             
             // Clock once more to reload and advance again
             triangle.clock(); // 0 -> reload to 3, advance to position 2
-            expect(triangle.output()).to.equal(13); // Position 2
+            expect(triangle.output()).toBe(13); // Position 2
         });
 
         it('should reload timer and advance sequencer when timer expires', () => {
@@ -186,14 +183,14 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x08);
             triangle.clockLinearCounter();
             
-            expect(triangle.output()).to.equal(15); // Position 0
+            expect(triangle.output()).toBe(15); // Position 0
             
             // Expire timer to advance sequencer
             for (let i = 0; i <= 0x05; i++) {
                 triangle.clock();
             }
             
-            expect(triangle.output()).to.equal(14); // Position 1
+            expect(triangle.output()).toBe(14); // Position 1
         });
 
         it('should handle timer period of 0', () => {
@@ -213,12 +210,12 @@ describe('TriangleChannel', () => {
             triangle.clockLinearCounter();
             
             // Period 1 is ultrasonic (< 2), so output is muted
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // Even after clocking, output remains muted
             triangle.clock();
             triangle.clock();
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
     });
 
@@ -273,12 +270,12 @@ describe('TriangleChannel', () => {
             }
             
             // Should now be muted (counter = 0)
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // Further clocks shouldn't change anything (reload flag cleared)
             triangle.clockLinearCounter();
             triangle.clockLinearCounter();
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should set reload flag when timer high register is written', () => {
@@ -318,7 +315,7 @@ describe('TriangleChannel', () => {
             triangle.clockLinearCounter(); // 2 -> 1
             triangle.clockLinearCounter(); // 1 -> 0
             
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should mute output when linear counter is 0', () => {
@@ -329,7 +326,7 @@ describe('TriangleChannel', () => {
             expect(triangle.output()).to.not.equal(0);
             
             triangle.clockLinearCounter(); // 1 -> 0
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
     });
 
@@ -347,21 +344,21 @@ describe('TriangleChannel', () => {
             
             // Write length index 0 (value from table: 10)
             triangle.writeTimerHigh(0x00); // Bits 7-3 = 00000
-            expect(triangle.lengthCounter).to.equal(10);
+            expect(triangle.lengthCounter).toBe(10);
             
             // Write length index 1 (value from table: 254)
             triangle.writeTimerHigh(0x08); // Bits 7-3 = 00001
-            expect(triangle.lengthCounter).to.equal(254);
+            expect(triangle.lengthCounter).toBe(254);
             
             // Write length index 3 (value from table: 2)
             triangle.writeTimerHigh(0x18); // Bits 7-3 = 00011
-            expect(triangle.lengthCounter).to.equal(2);
+            expect(triangle.lengthCounter).toBe(2);
         });
 
         it('should not load length counter when channel is disabled', () => {
             triangle.setEnabled(false);
             triangle.writeTimerHigh(0x08); // Try to load
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
         });
 
         it('should decrement length counter when clocked', () => {
@@ -372,13 +369,13 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x18); // Load index 3 = value 2
             triangle.clockLinearCounter(); // Reload linear counter
             
-            expect(triangle.lengthCounter).to.equal(2);
+            expect(triangle.lengthCounter).toBe(2);
             
             triangle.clockLengthCounter();
-            expect(triangle.lengthCounter).to.equal(1);
+            expect(triangle.lengthCounter).toBe(1);
             
             triangle.clockLengthCounter();
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
         });
 
         it('should halt length counter when control flag is set', () => {
@@ -387,7 +384,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x18); // Load index 3 = value 2
             triangle.clockLinearCounter();
             
-            expect(triangle.lengthCounter).to.equal(2);
+            expect(triangle.lengthCounter).toBe(2);
             
             // Clock multiple times
             triangle.clockLengthCounter();
@@ -395,7 +392,7 @@ describe('TriangleChannel', () => {
             triangle.clockLengthCounter();
             
             // Should still be 2 (halted)
-            expect(triangle.lengthCounter).to.equal(2);
+            expect(triangle.lengthCounter).toBe(2);
         });
 
         it('should not decrement length counter below 0', () => {
@@ -407,14 +404,14 @@ describe('TriangleChannel', () => {
             // Decrement to 0
             triangle.clockLengthCounter();
             triangle.clockLengthCounter();
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
             
             // Clock more times
             triangle.clockLengthCounter();
             triangle.clockLengthCounter();
             
             // Should still be 0
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
         });
 
         it('should mute output when length counter is 0', () => {
@@ -430,7 +427,7 @@ describe('TriangleChannel', () => {
             triangle.clockLengthCounter();
             
             // Should be muted
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should use control flag for both linear counter and length counter halt', () => {
@@ -442,7 +439,7 @@ describe('TriangleChannel', () => {
             // Length counter should be halted
             const lengthBefore = triangle.lengthCounter;
             triangle.clockLengthCounter();
-            expect(triangle.lengthCounter).to.equal(lengthBefore);
+            expect(triangle.lengthCounter).toBe(lengthBefore);
             
             // Linear counter reload flag should stay set
             triangle.clockLinearCounter(); // Should reload
@@ -466,7 +463,7 @@ describe('TriangleChannel', () => {
             expect(triangle.output()).to.not.equal(0);
             
             triangle.clockLinearCounter(); // Decrement to 0
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should mute when length counter is 0', () => {
@@ -480,7 +477,7 @@ describe('TriangleChannel', () => {
             triangle.clockLengthCounter(); // 2 -> 1
             triangle.clockLengthCounter(); // 1 -> 0
             
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should mute when timer period is 0 (ultrasonic)', () => {
@@ -488,7 +485,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x08); // Period = 0
             triangle.clockLinearCounter();
             
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should mute when timer period is 1 (ultrasonic)', () => {
@@ -496,7 +493,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x08); // Period = 1
             triangle.clockLinearCounter();
             
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
 
         it('should not mute when timer period is 2', () => {
@@ -522,7 +519,7 @@ describe('TriangleChannel', () => {
             triangle.clockLinearCounter();
             
             // Output should be muted
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // But sequencer should still advance
             // Change to non-ultrasonic period
@@ -534,7 +531,7 @@ describe('TriangleChannel', () => {
             }
             
             // Output should show sequencer advanced (not at position 0)
-            expect(triangle.output()).to.equal(14); // Position 1
+            expect(triangle.output()).toBe(14); // Position 1
         });
 
         it('should stop sequencer when linear counter is 0', () => {
@@ -547,7 +544,7 @@ describe('TriangleChannel', () => {
             for (let i = 0; i <= 0x10; i++) {
                 triangle.clock();
             }
-            expect(triangle.output()).to.equal(14); // Position 1
+            expect(triangle.output()).toBe(14); // Position 1
             
             // Zero linear counter
             triangle.clockLinearCounter(); // 1 -> 0
@@ -564,7 +561,7 @@ describe('TriangleChannel', () => {
             triangle.writeControl(0x01); // Reload = 1
             triangle.clockLinearCounter(); // Reload
             
-            expect(triangle.output()).to.equal(14); // Still at position 1
+            expect(triangle.output()).toBe(14); // Still at position 1
         });
 
         it('should stop sequencer when length counter is 0', () => {
@@ -577,7 +574,7 @@ describe('TriangleChannel', () => {
             for (let i = 0; i <= 0x10; i++) {
                 triangle.clock();
             }
-            expect(triangle.output()).to.equal(14); // Position 1
+            expect(triangle.output()).toBe(14); // Position 1
             
             // Zero length counter
             triangle.clockLengthCounter(); // 2 -> 1
@@ -592,7 +589,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x08); // Load length
             triangle.clockLinearCounter(); // Reload linear counter
             
-            expect(triangle.output()).to.equal(14); // Still at position 1
+            expect(triangle.output()).toBe(14); // Still at position 1
         });
     });
 
@@ -604,7 +601,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x08);
             triangle.clockLinearCounter();
             
-            expect(triangle.isEnabled()).to.equal(true);
+            expect(triangle.isEnabled()).toBe(true);
         });
 
         it('should disable and clear length counter with setEnabled(false)', () => {
@@ -612,15 +609,15 @@ describe('TriangleChannel', () => {
             triangle.writeControl(0x7F);
             triangle.writeTimerLow(0x10);
             triangle.writeTimerHigh(0x08);
-            expect(triangle.lengthCounter).to.be.greaterThan(0);
+            expect(triangle.lengthCounter).toBeGreaterThan(0);
             
             triangle.setEnabled(false);
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
         });
 
         it('should return false from isEnabled() when disabled', () => {
             triangle.setEnabled(false);
-            expect(triangle.isEnabled()).to.equal(false);
+            expect(triangle.isEnabled()).toBe(false);
         });
 
         it('should return false from isEnabled() when length counter is 0', () => {
@@ -632,7 +629,7 @@ describe('TriangleChannel', () => {
             triangle.clockLengthCounter();
             triangle.clockLengthCounter();
             
-            expect(triangle.isEnabled()).to.equal(false);
+            expect(triangle.isEnabled()).toBe(false);
         });
 
         it('should return true from isEnabled() when length counter > 0', () => {
@@ -641,7 +638,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerLow(0x10);
             triangle.writeTimerHigh(0x08);
             
-            expect(triangle.isEnabled()).to.equal(true);
+            expect(triangle.isEnabled()).toBe(true);
         });
     });
 
@@ -663,7 +660,7 @@ describe('TriangleChannel', () => {
             // Verify control flag halts length counter
             const lengthBefore = triangle.lengthCounter;
             triangle.clockLengthCounter();
-            expect(triangle.lengthCounter).to.equal(lengthBefore);
+            expect(triangle.lengthCounter).toBe(lengthBefore);
         });
 
         it('should write timer low register ($400A)', () => {
@@ -688,7 +685,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x13); // Bits 7-3 = 00010 (index 2), bits 2-0 = 011 (3)
             
             // Check length counter loaded
-            expect(triangle.lengthCounter).to.equal(20);
+            expect(triangle.lengthCounter).toBe(20);
             
             // Timer period should be 0x300
             triangle.clockLinearCounter(); // Reload linear counter
@@ -709,7 +706,7 @@ describe('TriangleChannel', () => {
             for (let i = 0; i < 5; i++) {
                 triangle.clockLinearCounter(); // Decrement to 0
             }
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // Write timer high again to set reload flag
             triangle.writeTimerHigh(0x08);
@@ -736,9 +733,9 @@ describe('TriangleChannel', () => {
             triangle.reset();
             
             // Check reset state
-            expect(triangle.lengthCounter).to.equal(0);
-            expect(triangle.isEnabled()).to.equal(false);
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
+            expect(triangle.isEnabled()).toBe(false);
+            expect(triangle.output()).toBe(0);
         });
     });
 
@@ -752,13 +749,13 @@ describe('TriangleChannel', () => {
             triangle.clockLinearCounter(); // Reload linear counter
             
             // Should produce output
-            expect(triangle.output()).to.equal(15);
+            expect(triangle.output()).toBe(15);
             
             // Advance sequencer
             for (let i = 0; i <= 0xFE; i++) {
                 triangle.clock();
             }
-            expect(triangle.output()).to.equal(14);
+            expect(triangle.output()).toBe(14);
         });
 
         it('should handle rapid enable/disable', () => {
@@ -768,7 +765,7 @@ describe('TriangleChannel', () => {
             triangle.writeTimerHigh(0x08);
             
             triangle.setEnabled(false);
-            expect(triangle.lengthCounter).to.equal(0);
+            expect(triangle.lengthCounter).toBe(0);
             
             triangle.setEnabled(true);
             triangle.writeTimerHigh(0x08);
@@ -788,7 +785,7 @@ describe('TriangleChannel', () => {
             
             // Expire linear counter
             triangle.clockLinearCounter(); // 1 -> 0
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
             
             // Reload linear counter
             triangle.writeTimerHigh(0x18);
@@ -798,7 +795,7 @@ describe('TriangleChannel', () => {
             // Expire length counter
             triangle.clockLengthCounter(); // 2 -> 1
             triangle.clockLengthCounter(); // 1 -> 0
-            expect(triangle.output()).to.equal(0);
+            expect(triangle.output()).toBe(0);
         });
     });
 
@@ -876,7 +873,7 @@ describe('TriangleChannel', () => {
                 triangle.clockLinearCounter(); // Load linear counter
                 
                 // Should be muted despite having linear and length counters
-                expect(triangle.output()).to.equal(0, 'Muted when period = 0');
+                expect(triangle.output()).toBe(0, 'Muted when period = 0');
             });
 
             it('should mute output when timer period = 1', () => {
@@ -888,7 +885,7 @@ describe('TriangleChannel', () => {
                 
                 triangle.clockLinearCounter();
                 
-                expect(triangle.output()).to.equal(0, 'Muted when period = 1');
+                expect(triangle.output()).toBe(0, 'Muted when period = 1');
             });
 
             it('should NOT mute when timer period = 2', () => {
@@ -926,7 +923,7 @@ describe('TriangleChannel', () => {
                 triangle.clockLinearCounter(); // Load linear counter
                 
                 // Has both counters loaded, but still muted due to timer
-                expect(triangle.output()).to.equal(0);
+                expect(triangle.output()).toBe(0);
             });
         });
     });
