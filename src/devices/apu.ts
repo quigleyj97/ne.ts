@@ -7,6 +7,10 @@ import { FrameCounter } from "./apu/units/frame-counter.js";
 import { ApuMixer } from "./apu/audio/mixer.js";
 import { Resampler } from "./apu/audio/resampler.js";
 
+// Vite-compatible worklet URL - works in both dev and production
+// Using new URL() with import.meta.url allows Vite to properly resolve and bundle the worklet
+const DEFAULT_WORKLET_URL = new URL('./apu/audio/worklet-processor.ts', import.meta.url).href;
+
 //#region APU Register Address Constants
 
 // Pulse 1 channel registers
@@ -822,8 +826,10 @@ export class Apu2A03WithWorklet extends Apu2A03 {
         });
         
         // Store worklet path for lazy initialization
-        // Default path works from demo/index.html perspective
-        this.workletPath = workletPath || '../lib/worklet/devices/apu/audio/worklet-processor.js';
+        // Use Vite-compatible URL that works in both dev and production
+        this.workletPath = workletPath || DEFAULT_WORKLET_URL;
+        
+        console.log('[APU] Worklet URL:', this.workletPath);
         
         // Create resampler to convert from APU rate to output rate
         this.resampler = new Resampler(APU_SAMPLE_RATE, OUTPUT_SAMPLE_RATE);
@@ -851,7 +857,7 @@ export class Apu2A03WithWorklet extends Apu2A03 {
         this.workletInitPromise = (async () => {
             try {
                 // Load the AudioWorklet module
-                console.log('[APU] Attempting to load AudioWorklet from:', this.workletPath);
+                console.log('[APU] Loading AudioWorklet from:', this.workletPath);
                 await this.audioContext.audioWorklet.addModule(this.workletPath);
                 
                 // Create the AudioWorkletNode
@@ -874,9 +880,9 @@ export class Apu2A03WithWorklet extends Apu2A03 {
                 this.workletNode.connect(this.audioContext.destination);
                 
                 this.workletInitialized = true;
-                console.log('AudioWorklet initialized successfully');
+                console.log('[APU] AudioWorklet initialized successfully');
             } catch (error) {
-                console.error('Failed to initialize AudioWorklet:', error);
+                console.error('[APU] Failed to initialize AudioWorklet:', error);
                 this.workletInitPromise = null; // Allow retry
                 throw error;
             }
