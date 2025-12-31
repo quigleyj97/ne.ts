@@ -6,11 +6,32 @@ A NES emulator written in TypeScript
 
 `yarn`, then `yarn build`. You can also use NPM, of course.
 
-## Running
+## Development
 
-The unit and integration tests can be run with `yarn test`. To run a more fully-
-featured demo environment, run `yarn serve` to open the emulator in a browser
-window.
+Start the Vite development server with Hot Module Replacement (HMR):
+
+```bash
+yarn dev
+```
+
+Other development commands:
+
+```bash
+yarn build        # Production build to dist/
+yarn preview      # Preview production build
+yarn typecheck    # Type-check without emitting
+```
+
+## Testing
+
+The project uses Vitest 4.0.16 for testing. Tests run in TypeScript directly without a compilation step.
+
+```bash
+yarn test         # Run all tests once
+yarn test:watch   # Run tests in watch mode
+yarn test:ui      # Open Vitest interactive UI
+yarn test:coverage # Run tests with coverage
+```
 
 ## Resources
 

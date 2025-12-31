@@ -4,11 +4,11 @@
 ne.ts is a Nintendo Entertainment System (NES) emulator written in TypeScript. The project aims to accurately emulate the NES hardware components including the 6502 CPU, 2C02 PPU (Picture Processing Unit), and 2A03 APU (Audio Processing Unit) to run NES ROM files in a browser environment.
 
 ## Tech Stack
-- **TypeScript** (v3.9.3+) - Strict mode enabled, targeting ESNext with ES2018 library support
-- **Build Tool** - TypeScript Compiler (tsc)
-- **Testing** - Mocha test framework with Chai assertions
+- **TypeScript** (v5.7.3) - Strict mode enabled, targeting ESNext with ES2022 library support
+- **Build Tool** - Vite 7.3.0 (with hot module replacement for development)
+- **Testing** - Vitest 4.0.16 (tests run in TypeScript directly, no compilation step)
 - **Module System** - ES Modules (type: "module" in package.json)
-- **Development Server** - http-server for serving the browser demo
+- **Development Server** - Vite dev server with HMR
 - **Runtime** - Browser environment (requires DOM for WebAudio API)
 
 ## Project Conventions
@@ -36,19 +36,24 @@ ne.ts is a Nintendo Entertainment System (NES) emulator written in TypeScript. T
 - **Performance Optimization**: Critical code paths avoid object overhead (e.g., PPU registers as class members instead of state object)
 
 ### Testing Strategy
-- **Framework**: Mocha with Chai for BDD-style assertions
+- **Framework**: Vitest 4.0.16 with expect-style assertions (compatible with Jest API)
 - **Test Organization**: Tests mirror source structure
   - `test/devices/` - Unit tests for hardware devices
   - `test/utils/` - Unit tests for utility functions
   - `test/integration/` - Integration tests (e.g., nestest ROM validation)
 - **Test Data**: Reference ROM files and logs in `test/data/` for validation
 - **Coverage**: Focus on cycle-accurate CPU behavior and correct opcode execution
-- **Run Command**: `yarn test` (recursive Mocha execution)
+- **Run Commands**:
+  - `yarn test` - Run all tests once
+  - `yarn test:watch` - Run tests in watch mode
+  - `yarn test:ui` - Open interactive Vitest UI
+  - `yarn test:coverage` - Run tests with coverage reporting
+- **Features**: Tests run directly in TypeScript without compilation, with HMR support in watch mode
 
 ### Git Workflow
 - **License**: GPL-3.0
 - **Repository**: GitHub at quigleyj97/ne.ts
-- **Build Artifacts**: Compiled output in `lib/` directory (excluded from git via .gitignore)
+- **Build Artifacts**: Compiled output in `dist/` directory (excluded from git via .gitignore)
 
 ## Domain Context
 
@@ -86,10 +91,10 @@ Key documentation and test resources (listed in [`README.md`](README.md)):
 ## External Dependencies
 - **Runtime Dependencies**: None (browser APIs only)
 - **Development Dependencies**:
-  - TypeScript compiler for transpilation
-  - Mocha/Chai for testing
-  - http-server for local development
+  - TypeScript 5.7.3 for type checking and transpilation
+  - Vite 7.3.0 for build tooling and development server
+  - Vitest 4.0.16 for testing
 - **Browser APIs**:
-  - Web Audio API (AudioContext, OscillatorNode) for sound
+  - Web Audio API (AudioContext, OscillatorNode, AudioWorklet) for sound
   - DOM for rendering and user interaction
 - **Test Resources**: nestest ROM and validation logs for integration testing
