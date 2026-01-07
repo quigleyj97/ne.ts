@@ -6,7 +6,7 @@ import dts from 'vite-plugin-dts';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(({ mode }) => ({
-  plugins: [
+  plugins: mode === 'demo' ? [] : [
     dts({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'test/**/*'],
@@ -14,8 +14,12 @@ export default defineConfig(({ mode }) => ({
     })
   ],
 
-  // Configure library build mode
-  build: {
+  // Configure library build mode (skip for demo builds)
+  build: mode === 'demo' ? {
+    outDir: 'dist',
+    emptyOutDir: true,
+    target: 'esnext',
+  } : {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'NeTs',
@@ -41,9 +45,10 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
   },
   
-  // Set demo as root for dev server (but not for tests)
+  // Set demo as root for dev server and demo builds (but not for tests or lib builds)
   root: mode === 'test' ? __dirname : 'demo',
-  publicDir: mode === 'test' ? false : '../roms',
+  publicDir: mode === 'test' ? false : (mode === 'demo' ? 'public' : '../roms'),
+  base: mode === 'demo' ? '/ne.ts/' : undefined,
   
   // Dev server configuration for demo
   server: {

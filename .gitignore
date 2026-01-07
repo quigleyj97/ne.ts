@@ -4,3 +4,4 @@ lib/
 roms/
 .DS_Store
 demo/dist
+demo/public/
