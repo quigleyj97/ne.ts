@@ -43,7 +43,7 @@ jobs:
           cp test/data/nestest.nes demo/public/test/data/
         
       - name: Build demo
-        run: npx vite build --config vite.config.demo.ts
+        run: yarn build:demo
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -51,7 +51,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './demo-dist'
+          path: './demo/dist'
 
   # Deployment job
   deploy:
