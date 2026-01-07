@@ -5,8 +5,8 @@ import dts from 'vite-plugin-dts';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-export default defineConfig(({ mode, command }) => ({
-  plugins: command === 'build' && mode === 'demo' ? [] : [
+export default defineConfig(({ mode }) => ({
+  plugins: mode === 'demo' ? [] : [
     dts({
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.test.ts', 'test/**/*'],
@@ -15,7 +15,7 @@ export default defineConfig(({ mode, command }) => ({
   ],
 
   // Configure library build mode (skip for demo builds)
-  build: command === 'build' && mode === 'demo' ? {
+  build: mode === 'demo' ? {
     outDir: 'dist',
     emptyOutDir: true,
     target: 'esnext',
