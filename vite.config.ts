@@ -19,6 +19,13 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     emptyOutDir: true,
     target: 'esnext',
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'demo/index.html'),
+        // AudioWorklet processor as separate entry
+        'worklet/processor': resolve(__dirname, 'src/devices/apu/audio/worklet-processor.ts')
+      }
+    }
   } : {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
