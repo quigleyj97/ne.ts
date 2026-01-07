@@ -35,7 +35,7 @@
         }
 
         async function load_emu() {
-            const res = await fetch("../test/data/nestest.nes", { headers: {
+            const res = await fetch(new URL("../test/data/nestest.nes", import.meta.url), { headers: {
                 'Content-Type': 'application/octet-stream'
             }})
             const buf = await res.arrayBuffer();
